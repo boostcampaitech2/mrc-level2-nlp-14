@@ -4,9 +4,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class ProjectArguments:
-    """
-    Arguments pertaining to construct project.
-    """
+    """ Arguments pertaining to construct project. """
     task: str = field(
         default="mrc",
         metadata={"help": "Task name. This kwarg is used by `TASK_INFOS_MAP` and `TASK_METRIC_MAP` to get task-specific information."},

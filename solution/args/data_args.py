@@ -4,14 +4,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class DataArguments:
-    """ Arguments related to data.
-    Attributes:
-        name:               The name of the (huggingface) dataset.
-        revision:           The version of the dataset.
-        data_cache_dir:     The directory where the data will be cached.
-        collator_name:      The name of the mapping with the data collator.
-        prep_pipeline_name: The name of the data preprocessing pipeline.
-    """
+    """ Arguments related to data. """
     dataset_name: str = field(
         default="./data/aistage-mrc/train_dataset", 
         metadata={"help": "The name of the dataset to use."},
