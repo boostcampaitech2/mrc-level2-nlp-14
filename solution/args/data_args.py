@@ -1,6 +1,7 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 
+from .argparse import lambda_field
 
 @dataclass
 class DataArguments:
@@ -8,6 +9,14 @@ class DataArguments:
     dataset_name: str = field(
         default="./data/aistage-mrc/train_dataset", 
         metadata={"help": "The name of the dataset to use."},
+    )
+    dataset_path: str = field(
+        default="./data/aistage-mrc",
+        metadata={"help": "The path of the dataset stored"},
+    )
+    context_path: str = field(
+        default="wikipedia_documents.json",
+        metadata={"help": "File name of context documents"}
     )
     overwrite_cache: bool = field(
         default=False,
@@ -50,7 +59,8 @@ class DataArguments:
         metadata={"help": "Whether to run passage retrieval using sparse embedding."},
     )
     num_clusters: int = field(
-        default=64, metadata={"help": "Define how many clusters to use for faiss."}
+        default=64,
+        metadata={"help": "Define how many clusters to use for faiss."}
     )
     top_k_retrieval: int = field(
         default=1,
@@ -59,5 +69,14 @@ class DataArguments:
         },
     )
     use_faiss: bool = field(
-        default=False, metadata={"help": "Whether to build with faiss"}
+        default=False,
+        metadata={"help": "Whether to build with faiss"}
+    )
+    sp_max_features: int = field(
+        default=50000,
+        metadata={"help": "Max features used for TF-IDF Vectorizer."}
+    )
+    sp_ngram_range: Tuple[int, int] = lambda_field(
+        default=(1,2),
+        metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
     )
