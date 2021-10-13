@@ -1,4 +1,4 @@
-from retrievals import (
+from .retrievals import (
     TfidfRetrieval,
     BM25Retrieval,
     DPRRetrieval,
