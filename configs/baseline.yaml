@@ -20,12 +20,12 @@ TrainingArguments:
   output_dir: outputs
   learning_rate: 3e-5
   do_train: True
-  do_eval: True
-  do_predict: True
-  evaluation_strategy: epoch
+  do_eval: False
+  do_predict: False
+  #evaluation_strategy: epoch
   save_strategy: epoch
   per_device_train_batch_size: 32
-  per_device_eval_batch_size: 32
+  #per_device_eval_batch_size: 32
   num_train_epochs: 1
   # eval_steps: 100
   # save_steps: 100
@@ -33,8 +33,8 @@ TrainingArguments:
   fp16: True
   weight_decay: 0.01
   warmup_steps: 100
-  load_best_model_at_end: True
-  metric_for_best_model: EM
+  #load_best_model_at_end: True
+  #metric_for_best_model: exact_match
   logging_dir: logs
   lr_scheduler_type: linear
 

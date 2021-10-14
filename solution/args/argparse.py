@@ -4,6 +4,7 @@ import sys
 import copy
 import json
 import yaml
+import argparse
 from enum import Enum
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -62,3 +63,10 @@ class HfArgumentParser(ArgumentParser):
             obj = dtype(**inputs)
             outputs.append(obj)
         return (*outputs,)
+
+
+def get_args_parser():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
+    command_args = parser.parse_args()
+    return command_args
