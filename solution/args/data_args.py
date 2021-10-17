@@ -1,7 +1,7 @@
 from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 
-from .argparse import lambda_field
+from solution.args.argparse import lambda_field
 
 @dataclass
 class DataArguments:
@@ -72,11 +72,11 @@ class DataArguments:
         default=False,
         metadata={"help": "Whether to build with faiss"}
     )
-    sp_max_features: int = field(
-        default=50000,
-        metadata={"help": "Max features used for TF-IDF Vectorizer."}
+    retrieval_name: bool = field(
+        default="tfidf",
+        metadata={"help": ""}
     )
-    sp_ngram_range: Tuple[int, int] = lambda_field(
-        default=(1,2),
-        metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
+    es_index_name: bool = field(
+        default="wiki",
+        metadata={"help": ""}
     )

@@ -31,13 +31,13 @@ from transformers import (
     EvalPrediction,
 )
 
-from ..args import (
+from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
     ModelingArguments,
 )
-from .core import (
+from solution.reader.core import (
     answer_column_name,
 )
 

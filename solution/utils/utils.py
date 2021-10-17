@@ -4,20 +4,37 @@ import random
 import torch
 import logging
 
-from typing import Tuple, Any
+from typing import Tuple, Any, Callable, List, Union, Dict
 from transformers import is_torch_available
 
 from transformers import PreTrainedTokenizerFast, TrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 
-from datasets import DatasetDict
+from datasets import Dataset, DatasetDict
 
-from ..args import (
+from solution.args import (
     DataArguments,
 )
 
 
 logger = logging.getLogger(__name__)
+
+
+def timer(dataset: bool = True):
+    def decorator(func: Callable):
+        """ Time decorator """
+        flag = True if dataset else False
+        def wrap_func(self, query_or_dataset: Union[str, Dataset], *args, **kwargs):
+            dataset_cond = isinstance(query_or_dataset, Dataset) and flag
+            str_cond = isinstance(query_or_dataset, str) and not flag
+            if dataset_cond or str_cond:
+                t0 = time.time()
+            output = func(self, query_or_dataset, *args, **kwargs)
+            if dataset_cond or str_cond:
+                print(f"[{func.__name__}] done in {time.time() - t0:.3f} s")
+            return output
+        return wrap_func
+    return decorator
 
 
 def set_seed(seed: int = 42):

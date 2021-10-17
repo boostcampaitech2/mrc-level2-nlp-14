@@ -1,6 +1,6 @@
-from .argparse import HfArgumentParser, get_args_parser
+from solution.args.argparse import HfArgumentParser, get_args_parser
 
-from .data_args import DataArguments
-from .project_args import ProjectArguments
-from .training_args import NewTrainingArguments
-from .modeling_args import ModelingArguments
+from solution.args.data_args import DataArguments
+from solution.args.project_args import ProjectArguments
+from solution.args.training_args import NewTrainingArguments
+from solution.args.modeling_args import ModelingArguments

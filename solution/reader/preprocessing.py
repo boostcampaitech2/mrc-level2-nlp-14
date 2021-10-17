@@ -4,13 +4,13 @@ from transformers import (
     TrainingArguments,
 )
 
-from ..args import (
+from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
     ModelingArguments,
 )
-from .core import (
+from solution.reader.core import (
     question_column_name,
     context_column_name,
     answer_column_name,
