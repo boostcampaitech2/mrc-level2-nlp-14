@@ -1,7 +1,7 @@
 # Data Arguments
 DataArguments:
   dataset_name: ./data/aistage-mrc/train_dataset
-  overwrite_cache: False
+  overwrite_cache: True
   preprocessing_num_workers: null
   max_seq_length: 384
   pad_to_max_length: False
@@ -12,24 +12,25 @@ DataArguments:
   top_k_retrieval: 1
   use_faiss: True
 
-# TrainingArguments
-TrainingArguments:
-  trainer_class: QuestionAnsweringTrainer
-  report_to: wandb
+# TrainingArguments:
+NewTrainingArguments:
+  # trainer_class: QuestionAnsweringTrainer
+  report_to: none
   run_name: test
   output_dir: outputs
+  overwrite_output_dir: False
   learning_rate: 3e-5
   do_train: True
-  do_eval: False
-  do_predict: False
-  #evaluation_strategy: epoch
+  do_eval: True
+  do_predict: True # eval_retrieval = True 필수
+  evaluation_strategy: epoch
   save_strategy: epoch
-  per_device_train_batch_size: 32
-  #per_device_eval_batch_size: 32
-  num_train_epochs: 1
+  per_device_train_batch_size: 64
+  per_device_eval_batch_size: 64
+  num_train_epochs: 6
   # eval_steps: 100
   # save_steps: 100
-  save_total_limit: 5
+  save_total_limit: 1
   fp16: True
   weight_decay: 0.01
   warmup_steps: 100
@@ -41,7 +42,8 @@ TrainingArguments:
 # Model Arguments
 ModelingArguments:
   model_name_or_path: klue/bert-base
-  architectures: AutoModelForQuestionAnswering
+  architectures: ExtractiveReaderBaselineModel
+  method: ext
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
@@ -50,6 +52,6 @@ ModelingArguments:
 # Project Arguments
 ProjectArguments:
   task: mrc
-  wandb_project: mrc
+  wandb_project: mrc_reader_test
   save_model_dir: best
-  checkpoint: null
+  checkpoint: None

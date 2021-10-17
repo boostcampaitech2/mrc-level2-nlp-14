@@ -25,22 +25,20 @@ from typing import Optional, Tuple
 import numpy as np
 from tqdm.auto import tqdm
 
-from transformers import (
-    HfArgumentParser,
-    TrainingArguments,
-    EvalPrediction,
-)
-
+from transformers import EvalPrediction
+print(os.getcwd())
 from ..args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
     ModelingArguments,
-)
-from .core import (
-    answer_column_name,
+    NewTrainingArguments,
+    ProjectArguments,
 )
 
+from .constant import (
+    answer_column_name,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -308,10 +306,10 @@ def postprocess_qa_predictions(
 def post_processing_function(examples, features, predictions, training_args):
     command_args = get_args_parser()
     parser = HfArgumentParser(
-        (ModelingArguments, DataArguments, TrainingArguments)
+        (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
     )
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
-
+    data_args, _, _, _ = \
+        parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
 
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     predictions = postprocess_qa_predictions(

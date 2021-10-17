@@ -1,0 +1,3 @@
+from transformers import Trainer, Seq2SeqTrainer
+from .trainer_qa import QuestionAnsweringTrainer
+from .trainer_seq2seq_qa import QuestionAnsweringSeq2SeqTrainer

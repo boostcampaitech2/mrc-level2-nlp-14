@@ -1,28 +1,35 @@
 import os
+from functools import partial
+
 from transformers import (
     HfArgumentParser,
     TrainingArguments,
 )
+import transformers
+
+from solution.args import project_args
 
 from ..args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
     ModelingArguments,
+    NewTrainingArguments,
+    ProjectArguments
 )
-from .core import (
+
+from .constant import (
     question_column_name,
     context_column_name,
     answer_column_name,
 )
 
-
 def tokenize_examples(examples, tokenizer):
     command_args = get_args_parser()
     parser = HfArgumentParser(
-        (ModelingArguments, DataArguments, TrainingArguments)
+        (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
     )
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
+    data_args, _, _, _ = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
 
     pad_on_right = tokenizer.padding_side == "right"
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
@@ -137,3 +144,13 @@ def prepare_validation_features(examples, tokenizer):
             for k, o in enumerate(tokenized_examples["offset_mapping"][i])
         ]
     return tokenized_examples
+
+PREPARE_FEATURES = {'train' : prepare_train_features,
+                    'valid' : prepare_validation_features}
+
+def prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):
+    """ Get prepare functions. prepare_train_features or prepare_validation_features """
+    return partial(
+                PREPARE_FEATURES[split],
+                tokenizer=tokenizer,
+            )
