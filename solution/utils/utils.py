@@ -7,7 +7,9 @@ import logging
 from typing import Tuple, Any, Callable, List, Union, Dict
 from transformers import is_torch_available
 
-from transformers import PreTrainedTokenizerFast, TrainingArguments
+from transformers import PreTrainedTokenizerFast
+
+from ..args import NewTrainingArguments
 from transformers.trainer_utils import get_last_checkpoint
 
 from datasets import Dataset, DatasetDict
@@ -56,7 +58,7 @@ def set_seed(seed: int = 42):
 
 def check_no_error(
     data_args: DataArguments,
-    training_args: TrainingArguments,
+    training_args: NewTrainingArguments,
     datasets: DatasetDict,
     tokenizer,
 ) -> Tuple[Any, int]:

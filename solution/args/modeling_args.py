@@ -11,9 +11,15 @@ class ModelingArguments:
         default="klue/bert-base",
         metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
+    method: str = field(
+        default="ext",
+        metadata={
+            "help": "Method to MRC system based in. e.g. ext : extraction-based, gen : generation-based"
+        },
+    )
     architectures: str = field(
-        default="AutoModelForQuestionAnswering",
-        metadata={"help": "Model architectures. You can find this object on `solution/models`"},
+        default="ExtractiveReaderBaselineModel",
+        metadata={"help": "Reader Model Archtectures"},
     )
     config_name: Optional[str] = field(
         default=None,
