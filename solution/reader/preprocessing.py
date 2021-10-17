@@ -9,7 +9,7 @@ import transformers
 
 from solution.args import project_args
 
-from ..args import (
+from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
@@ -17,7 +17,6 @@ from ..args import (
     NewTrainingArguments,
     ProjectArguments
 )
-
 from .constant import (
     question_column_name,
     context_column_name,
