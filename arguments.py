@@ -1,3 +1,4 @@
+""" Deprecated file (for new_run.py) """
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
@@ -11,9 +12,24 @@ class ModelArguments:
     model_name_or_path: str = field(
         default="klue/bert-base",
         metadata={
-            "help": "Path to pretrained model or model identifier from huggingface.co/models"
+            "help": "Path to pretrained backbone model or model identifier from huggingface.co/models"
         },
     )
+
+    method: str = field(
+        default="ext",
+        metadata={
+            "help": "Method to MRC system based in. e.g. ext : extraction-based, gen : generation-based"
+        },
+    )
+
+    architectures: str = field(
+        default="ExtractiveReaderBaselineModel",
+        metadata={
+            "help": "Reader Model Archtectures"
+        },
+    )
+
     config_name: Optional[str] = field(
         default=None,
         metadata={
@@ -26,6 +42,13 @@ class ModelArguments:
             "help": "Pretrained tokenizer name or path if not the same as model_name"
         },
     )
+    model_cache_dir: Optional[str] = field(
+        default="cache",
+        metadata={
+            "help": "Cache directory for model"
+        },
+    )
+
 
 
 @dataclass
