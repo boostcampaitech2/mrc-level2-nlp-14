@@ -100,7 +100,7 @@ class DataArguments:
         default=(1,2),
         metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
     )
-    tokenizer_name: str = field(
+    retrieval_tokenizer_name: str = field(
         default="mecab",
         metadata={"help": ""}
     )
@@ -116,6 +116,10 @@ class DataArguments:
         default="localhost:9200",
         metadata={"help": ""}
     )
+    es_similarity: str = field(
+        default="bm25_similarity",
+        metadata={"help": ""}
+    )
     use_korean_stopwords: bool = field(
         default=False,
         metadata={"help": ""}
@@ -126,10 +130,6 @@ class DataArguments:
     )
     lowercase: bool = field(
         default=False,
-        metadata={"help": ""}
-    )
-    stopword_path: str = field(
-        default="user_dic/my_stop_dic.txt",
         metadata={"help": ""}
     )
     nori_readingform: bool = field(
@@ -164,7 +164,7 @@ class DataArguments:
         default="ll",
         metadata={"help": "[ll, spl]"}
     )
-    ib_lambda: = field(
+    ib_lambda: str = field(
         default="df",
         metadata={"help": "[df, ttf]"}
     )
@@ -175,4 +175,8 @@ class DataArguments:
     lmjm_lambda: float = field(
         default=0.1,
         metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
+    )
+    rebuilt_index: bool = field(
+        default=False,
+        metadata={"help": ""}
     )

@@ -49,7 +49,8 @@ class PandasMixin:
         self, 
         query_or_dataset, 
         doc_scores, 
-        doc_indices
+        doc_indices,
+        doc_contexts=None,
     ) -> pd.DataFrame:
         """
         Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
@@ -68,6 +69,7 @@ class PandasMixin:
                 "context_score": doc_scores[idx],
                 "context": " ".join(
                     [self.contexts[pid] for pid in doc_indices[idx]]
+                    if doc_contexts is None else doc_contexts
                 )
             }
             if "context" in example.keys() and "answers" in example.keys():

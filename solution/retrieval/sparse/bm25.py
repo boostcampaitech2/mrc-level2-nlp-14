@@ -7,7 +7,7 @@ from solution.retrieval.sparse.base import SparseRetrieval
 class BM25Retrieval(SparseRetrieval):
     
     def __init__(self, args: DataArguments):
-        self.tokenizer_name = args.sp_tokenizer
+        self.tokenizer_name = args.retrieval_tokenizer_name
         self.vectorizer = CountVectorizer(tokenizer=self.tokenize_fn)
         super().__init__(args)
         self.b = args.bm25_b
