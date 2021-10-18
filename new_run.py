@@ -7,6 +7,8 @@ from typing import List, Callable
 import wandb
 from datasets import Sequence, Value, Features, Dataset, DatasetDict
 
+from solution.reader.preprocessing import ext_prepare_features, gen_prepare_features
+
 from transformers import set_seed
 
 from retrieval import SparseRetrieval
@@ -52,20 +54,22 @@ def main():
 
     # Set-up WANDB
     os.environ["WANDB_PROJECT"] = project_args.wandb_project
-
-    print(data_args)
     # Reader 모델 통합 관리 객체. 생성시에 데이터셋 및 모델 세팅 수행됨
     if model_args.method == 'ext':
         reader = ExtractiveReader(command_args=command_args,
                                     compute_metrics=compute_metrics,
+                                    pre_process_function=ext_prepare_features,
+                                    post_process_function=post_processing_function,
+                                    logger=logger)
+    elif model_args.method == 'gen':
+        reader = GenerativeReader(command_args=command_args,
+                                    compute_metrics=compute_metrics,
+                                    pre_process_function=gen_prepare_features,
                                     post_process_function=post_processing_function,
                                     logger=logger)
     else:
-        reader = GenerativeReader(command_args=command_args,
-                                    compute_metrics=compute_metrics,
-                                    post_process_function=post_processing_function,
-                                    logger=logger)
-    
+        raise ValueError("Check whether model_args.method is 'ext or 'gen'")
+
     '''
     1. answer 존재 유무 : validation of train set / validation of test_set
     2. context retrieval 유무 : eval_retrieval True / False

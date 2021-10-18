@@ -50,7 +50,7 @@ def tokenize_examples(examples, tokenizer):
 
 
 # Train preprocessing / 전처리를 진행합니다.
-def prepare_train_features(examples, tokenizer):
+def ext_prepare_train_features(examples, tokenizer):
     tokenized_examples = tokenize_examples(examples, tokenizer)
     pad_on_right = tokenizer.padding_side == "right"
 
@@ -116,8 +116,34 @@ def prepare_train_features(examples, tokenizer):
     return tokenized_examples
 
 
+def gen_preprocess_function(examples, tokenizer):
+    inputs = [f"question: {q}  context: {c} </s>" for q, c in zip(examples["question"], examples["context"])]
+    targets = [f'{a["text"][0]} </s>' for a in examples['answers']]
+    model_inputs = tokenizer(
+        inputs,
+        max_length=max_source_length,
+        padding=padding,
+        truncation=True
+    )
+
+    # targets(label)을 위해 tokenizer 설정
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(
+            targets,
+            max_length=max_target_length,
+            padding=padding,
+            truncation=True
+        )
+
+    model_inputs["labels"] = labels["input_ids"]
+    model_inputs["example_id"] = []
+    for i in range(len(model_inputs["labels"])):
+        model_inputs["example_id"].append(examples["id"][i])
+    return model_inputs
+
+
 # Validation preprocessing
-def prepare_validation_features(examples, tokenizer):
+def ext_prepare_validation_features(examples, tokenizer):
     tokenized_examples = tokenize_examples(examples, tokenizer)
     pad_on_right = tokenizer.padding_side == "right"
 
@@ -144,12 +170,24 @@ def prepare_validation_features(examples, tokenizer):
         ]
     return tokenized_examples
 
-PREPARE_FEATURES = {'train' : prepare_train_features,
-                    'valid' : prepare_validation_features}
 
-def prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):
+EXT_PREPARE_FEATURES = {'train' : ext_prepare_train_features,
+                    'valid' : ext_prepare_validation_features}
+
+GEN_PREPARE_FEATURES =  {'train' : gen_preprocess_function,
+                    'valid' : gen_preprocess_function}
+
+
+def ext_prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):
     """ Get prepare functions. prepare_train_features or prepare_validation_features """
     return partial(
-                PREPARE_FEATURES[split],
+                EXT_PREPARE_FEATURES[split],
+                tokenizer=tokenizer,
+            )
+
+def gen_prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):
+    """ Get prepare functions. prepare_train_features or prepare_validation_features """
+    return partial(
+                GEN_PREPARE_FEATURES[split],
                 tokenizer=tokenizer,
             )

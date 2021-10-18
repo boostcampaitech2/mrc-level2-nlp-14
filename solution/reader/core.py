@@ -137,6 +137,12 @@ class ReaderBase():
 
     # @property
     @abc.abstractmethod
+    def pre_process_function(self):
+        """ Get pre_process_function (fix name convention) """
+        pass
+
+    # @property
+    @abc.abstractmethod
     def post_process_function(self):
         """ Get post_process_function (fix name convention) """
         pass
@@ -243,7 +249,7 @@ class ReaderBase():
         # Context가 Retrieved passage로 채워진 validation set에 대해 전처리를 수행합니다.
         column_names = retrieved_examples.column_names
         retrieved_dataset = retrieved_examples.map(
-            prepare_features('valid', tokenizer=self.tokenizer),
+            self.pre_process_function('valid', tokenizer=self.tokenizer),
             batched=True,
             num_proc=self.args.data_args.preprocessing_num_workers,
             remove_columns=column_names,
@@ -275,7 +281,7 @@ class ReaderBase():
 
             # dataset에서 train feature를 생성합니다.
             self.train_dataset = self.train_dataset.map(
-                prepare_features(split='train', tokenizer=self.tokenizer),
+                self.pre_process_function(split='train', tokenizer=self.tokenizer),
                 batched=True,
                 num_proc=self.args.data_args.preprocessing_num_workers,
                 remove_columns=column_names,
@@ -289,7 +295,7 @@ class ReaderBase():
 
             # Validation Feature 생성
             self.eval_dataset = self.eval_dataset.map(
-                prepare_features('valid', tokenizer=self.tokenizer),
+                self.pre_process_function('valid', tokenizer=self.tokenizer),
                 batched=True,
                 num_proc=self.args.data_args.preprocessing_num_workers,
                 remove_columns=column_names,

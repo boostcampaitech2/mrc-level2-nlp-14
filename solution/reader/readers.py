@@ -30,16 +30,20 @@ from ..utils import compute_metrics
 
 from .core import ReaderBase
 from . import post_processing_function
+from .preprocessing import ext_prepare_features, gen_prepare_features
+
 
 class ExtractiveReader(ReaderBase):
     """ Base class for Extractive Reader module """
     def __init__(self, command_args:argparse.Namespace,
                  compute_metrics=compute_metrics,
+                 pre_process_function=ext_prepare_features,
                  post_process_function=post_processing_function,
                  logger=None,):
         self.logger = logger
         self._set_args(command_args)
         self._set_initial_setup()
+        self.pre_process_function = pre_process_function
         self.set_preprocessing()
         self.post_process_function = post_process_function
         self.compute_metrics = compute_metrics
@@ -82,10 +86,12 @@ class GenerativeReader(ReaderBase):
     """ Base class for Generative Reader module """
     def __init__(self, command_args:argparse.Namespace,
                  compute_metrics=compute_metrics,
+                 pre_process_function=gen_prepare_features,
                  post_process_function=post_processing_function,
                  logger=None,):
         self._set_args(command_args)
         self._set_initial_setup()
+        self.pre_process_function = pre_process_function
         self.set_preprocessing(self.datasets)
         self.post_process_function = post_process_function
         self.compute_metrics = compute_metrics
