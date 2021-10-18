@@ -131,9 +131,6 @@ class SparseRetrieval(RetrievalBase):
             return self.get_topk_documents_with_faiss(query_embs, topk)
         if self.enable_batch:
             return self.get_topk_documents_bulk(query_embs, topk)
-        result = []
-        for i, query_emb in enumerate(query_embs):
-            result.append()
         doc_scores = []
         doc_indices = []
         for query_emb in query_embs:

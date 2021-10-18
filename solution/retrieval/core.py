@@ -1,7 +1,7 @@
 import os
 import abc
 import json
-from typing import List, Union, Tuple, Optional, Callable
+from typing import List, Union, Tuple, Optional, Callable, Any
 
 from scipy.sparse.csr import csr_matrix
 import numpy as np
@@ -15,26 +15,19 @@ from solution.retrieval.retrieve_mixin import FaissMixin, PandasMixin
 ArrayMatrix = Union[csr_matrix, np.ndarray]
 
 
-class RetrievalBase(FaissMixin, PandasMixin):
+class SearchBase(PandasMixin):
     """
-    Base class for Retrieval module.
+    Base class for Search Engine.
     
-    Main method:
+    Abstract method:
         - retrieve: Callable
         - get_relevant_doc: Callable
-        
-    Abstract method:
-        - get_query_embedding: Callable
-        - get_passage_embedding: Callable
-        - get_topk_documents: Callable
-        
+    
     Attributes:
         - contexts: List[str]
         - contexts_ids: List[int]
-        - p_embedding: ArrayMatrix
         - context_file_path: str
         - dataset_path: str
-        - use_faiss: bool
     """
     
     def __init__(self, args: DataArguments):
@@ -48,11 +41,7 @@ class RetrievalBase(FaissMixin, PandasMixin):
         self._context_ids = list(
             dict.fromkeys([v["document_id"] for v in corpus.values()])
         )
-        self.get_passage_embedding()
         
-        if args.use_faiss:
-            self.build_faiss(args.data_path, args.num_clusters)
-            
     @property
     def contexts(self) -> List[str]:
         """
@@ -69,17 +58,8 @@ class RetrievalBase(FaissMixin, PandasMixin):
         When the object is created, contexts are read from the corpus
         ans assigned as attribute.
         """
-        return self._context_ids
+        return self._context_ids 
     
-    @property
-    def p_embedding(self) -> ArrayMatrix:
-        """
-        Get passage embeddings(fix name convention).
-        When the object is created, execute the `get_passage_embedding` method
-        to get passage embedding from the context attribute.
-        """
-        return self._p_embedding
-            
     @property
     def context_file_path(self) -> str:
         """ Get context file path. """
@@ -89,6 +69,50 @@ class RetrievalBase(FaissMixin, PandasMixin):
     def dataset_path(self) -> str:
         """ Get context data path for caching. """
         return self.args.dataset_path
+    
+    @abc.abstractmethod
+    def retrieve(self, query, topk, **kwargs) -> Any:
+        pass
+    
+    @abc.abstractmethod
+    def get_relevant_doc(self, query, topk, **kwargs) -> Tuple[List, List]:
+        pass
+    
+
+class RetrievalBase(SearchBase, FaissMixin):
+    """
+    Base class for Retrieval module.
+    
+    Main method:
+        - retrieve: Callable
+        - get_relevant_doc: Callable
+        
+    Abstract method:
+        - get_query_embedding: Callable
+        - get_passage_embedding: Callable
+        - get_topk_documents: Callable
+        
+    Attributes:
+        - p_embedding: ArrayMatrix
+        - use_faiss: bool
+    """
+    
+    def __init__(self, args: DataArguments):
+        super().__init__(args)
+        
+        self.get_passage_embedding()
+        
+        if args.use_faiss:
+            self.build_faiss(args.data_path, args.num_clusters)
+    
+    @property
+    def p_embedding(self) -> ArrayMatrix:
+        """
+        Get passage embeddings(fix name convention).
+        When the object is created, execute the `get_passage_embedding` method
+        to get passage embedding from the context attribute.
+        """
+        return self._p_embedding
     
     @property
     def use_faiss(self) -> bool:

@@ -7,7 +7,7 @@ from solution.retrieval.sparse.base import SparseRetrieval
 class TfidfRetrieval(SparseRetrieval):
     
     def __init__(self, args: DataArguments):
-        self.tokenizer_name = args.sp_tokenizer
+        self.tokenizer_name = args.tokenizer_name
         self.vectorizer = TfidfVectorizer(
             tokenizer=self.tokenize_fn,
             ngram_range=args.sp_ngram_range,
