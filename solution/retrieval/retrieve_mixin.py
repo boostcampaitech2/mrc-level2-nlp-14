@@ -3,6 +3,8 @@ import faiss
 import pandas as pd
 from tqdm.auto import tqdm
 
+from solution.args import DataArguments
+
 
 class FaissMixin:
     

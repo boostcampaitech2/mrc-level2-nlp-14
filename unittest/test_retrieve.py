@@ -11,7 +11,7 @@ project_path = os.path.dirname(src_path)
 sys.path.append(project_path)
 
 from solution.args import HfArgumentParser, DataArguments, ModelingArguments
-from solution.retrieve import TfidfRetrieval
+from solution.retrieval import TfidfRetrieval
 
 
 def main(args):
@@ -26,12 +26,7 @@ def main(args):
     print("*" * 40, "query dataset", "*" * 40)
     print(full_ds)
     
-    tokenizer = AutoTokenizer.from_pretrained(
-        args.model_name_or_path,
-        use_fast=False,
-    )
-    
-    retriever = TfidfRetrieval(args, tokenizer=tokenizer)
+    retriever = TfidfRetrieval(args)
     
     query = "대통령을 포함한 미국의 행정부 견제권을 갖는 국가 기관은?"
     
