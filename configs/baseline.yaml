@@ -15,7 +15,7 @@ DataArguments:
 # TrainingArguments:
 NewTrainingArguments:
   # trainer_class: QuestionAnsweringTrainer
-  report_to: none
+  report_to: wandb
   run_name: test
   output_dir: outputs
   overwrite_output_dir: False
@@ -34,15 +34,15 @@ NewTrainingArguments:
   fp16: True
   weight_decay: 0.01
   warmup_steps: 100
-  #load_best_model_at_end: True
-  #metric_for_best_model: exact_match
+  load_best_model_at_end: True
+  metric_for_best_model: exact_match
   logging_dir: logs
   lr_scheduler_type: linear
 
 # Model Arguments
 ModelingArguments:
   model_name_or_path: klue/bert-base
-  architectures: ExtractiveReaderBaselineModel
+  architectures: ExtractiveReaderModel
   method: ext
   config_name: null
   tokenizer_name: null
