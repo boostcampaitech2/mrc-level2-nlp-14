@@ -1,36 +1,14 @@
-import logging
-import os
-import abc
-import time
-import json
-import pickle
 import argparse
-from dataclasses import dataclass
-from functools import partial
 
-from typing import List, Union, Tuple, Optional
+from datasets import Dataset
 
-import scipy
-import numpy as np
-import pandas as pd
+from solution.trainers import QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer
 
-import torch.nn as nn
-import torch.nn.functional as F
+from solution.utils import compute_metrics
 
-
-from datasets import Dataset, load_metric
-from transformers import PreTrainedModel, AutoModelForQuestionAnswering, AutoModelForSeq2SeqLM, AutoTokenizer
-
-from transformers import AutoModel, AutoModelForSeq2SeqLM
-from transformers.modeling_outputs import QuestionAnsweringModelOutput
-
-from ..trainers import Trainer, QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer
-
-from ..utils import compute_metrics
-
-from .core import ReaderBase
-from . import post_processing_function
-from .preprocessing import ext_prepare_features, gen_prepare_features
+from solution.reader.core import ReaderBase
+from solution.reader.postprocessing import post_processing_function
+from solution.reader.preprocessing import ext_prepare_features, gen_prepare_features
 
 
 class ExtractiveReader(ReaderBase):

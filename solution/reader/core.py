@@ -18,43 +18,19 @@ import logging
 import os
 import sys
 import abc
-from abc import ABCMeta, abstractmethod
 
-import time
-import json
-import pickle
 import argparse
 from dataclasses import dataclass
-from functools import partial
 
-from typing import List, Union, Tuple, Optional
-
-import scipy
-import numpy as np
-import pandas as pd
-
-import torch.nn as nn
-import torch.nn.functional as F
-
-
-from datasets import load_metric, load_from_disk, Sequence, Value, Features, Dataset, DatasetDict
-from transformers import AutoConfig, PreTrainedModel, AutoModelForQuestionAnswering, AutoModelForSeq2SeqLM, AutoTokenizer
+from datasets import load_from_disk, Dataset
+from transformers import AutoConfig, AutoTokenizer
 
 from transformers import (
     DataCollatorWithPadding,
-    EvalPrediction,
-    TrainingArguments,
     set_seed,
 )
-from transformers import AutoModel, AutoModelForSeq2SeqLM
-from transformers.modeling_outputs import QuestionAnsweringModelOutput
 
-from solution.args import project_args
-
-
-from ..trainers import Trainer, QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer
-
-from ..args import (
+from solution.args import (
     HfArgumentParser,
     DataArguments,
     NewTrainingArguments,
@@ -62,12 +38,8 @@ from ..args import (
     ProjectArguments,
 )
 
-from ..utils import (
+from solution.utils import (
     check_no_error,
-)
-
-from .preprocessing import (
-    prepare_features,
 )
 
 from .reader_models import READER_MODEL

@@ -3,11 +3,8 @@ from functools import partial
 
 from transformers import (
     HfArgumentParser,
-    TrainingArguments,
 )
 import transformers
-
-from solution.args import project_args
 
 from solution.args import (
     HfArgumentParser,
@@ -17,7 +14,7 @@ from solution.args import (
     NewTrainingArguments,
     ProjectArguments
 )
-from .constant import (
+from solution.reader.constant import (
     question_column_name,
     context_column_name,
     answer_column_name,
@@ -116,7 +113,8 @@ def ext_prepare_train_features(examples, tokenizer):
     return tokenized_examples
 
 
-def gen_preprocess_function(examples, tokenizer):
+def gen_prepare_train_features(examples, tokenizer):
+    """Function for preprocessing training features"""
     inputs = [f"question: {q}  context: {c} </s>" for q, c in zip(examples["question"], examples["context"])]
     targets = [f'{a["text"][0]} </s>' for a in examples['answers']]
     model_inputs = tokenizer(
@@ -174,8 +172,8 @@ def ext_prepare_validation_features(examples, tokenizer):
 EXT_PREPARE_FEATURES = {'train' : ext_prepare_train_features,
                     'valid' : ext_prepare_validation_features}
 
-GEN_PREPARE_FEATURES =  {'train' : gen_preprocess_function,
-                    'valid' : gen_preprocess_function}
+GEN_PREPARE_FEATURES =  {'train' : gen_prepare_train_features,
+                    'valid' : gen_prepare_train_features}
 
 
 def ext_prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):

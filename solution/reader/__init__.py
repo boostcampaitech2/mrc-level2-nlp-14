@@ -1,16 +1,20 @@
 from solution.reader.preprocessing import (
-    prepare_train_features,
-    prepare_validation_features,
+    ext_prepare_train_features,
+    ext_prepare_validation_features,
+    gen_prepare_train_features,
+    ext_prepare_features, 
+    gen_prepare_features
+
 )
 from solution.reader.postprocessing import (
     post_processing_function,
     postprocess_qa_predictions,
 )
-from .readers import (
+from solution.reader.readers import (
     ExtractiveReader,
     GenerativeReader,
 )
-from .reader_models import (
+from solution.reader.reader_models import (
     READER_MODEL,
     ExtractiveReaderModel,
     ExtractiveReaderBaselineModel,
@@ -18,7 +22,7 @@ from .reader_models import (
     GenerativeReaderModel
 )
 
-from .constant import (
+from solution.reader.constant import (
     question_column_name,
     context_column_name,
     answer_column_name,

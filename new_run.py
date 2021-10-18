@@ -7,7 +7,6 @@ from typing import List, Callable
 import wandb
 from datasets import Sequence, Value, Features, Dataset, DatasetDict
 
-from solution.reader.preprocessing import ext_prepare_features, gen_prepare_features
 
 from transformers import set_seed
 
@@ -26,6 +25,8 @@ from solution.reader import (
     post_processing_function,
     ExtractiveReader,
     GenerativeReader,
+    ext_prepare_features,
+    gen_prepare_features
 )
 from solution.utils import (
     compute_metrics,
