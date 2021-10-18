@@ -19,41 +19,18 @@ import os
 import sys
 import abc
 
-import time
-import json
-import pickle
 import argparse
 from dataclasses import dataclass
-from functools import partial
 
-from typing import List, Union, Tuple, Optional
-
-import scipy
-import numpy as np
-import pandas as pd
-
-import torch.nn as nn
-import torch.nn.functional as F
-
-
-from datasets import load_metric, load_from_disk, Sequence, Value, Features, Dataset, DatasetDict
-from transformers import AutoConfig, PreTrainedModel, AutoModelForQuestionAnswering, AutoModelForSeq2SeqLM, AutoTokenizer
+from datasets import load_from_disk, Dataset
+from transformers import AutoConfig, AutoTokenizer, AutoModel
 
 from transformers import (
     DataCollatorWithPadding,
-    EvalPrediction,
-    TrainingArguments,
     set_seed,
 )
-from transformers import AutoModel, AutoModelForSeq2SeqLM
-from transformers.modeling_outputs import QuestionAnsweringModelOutput
 
-from solution.args import project_args
-
-
-from ..trainers import Trainer, QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer
-
-from ..args import (
+from solution.args import (
     HfArgumentParser,
     DataArguments,
     NewTrainingArguments,
@@ -61,15 +38,11 @@ from ..args import (
     ProjectArguments,
 )
 
-from ..utils import (
+from solution.utils import (
     check_no_error,
 )
 
-from .preprocessing import (
-    prepare_features,
-)
-
-from .reader_models import READER_MODEL
+from solution.reader.reader_models import READER_MODEL
 
 class ReaderBase():
     """ Base class for Reader module """
@@ -125,8 +98,8 @@ class ReaderBase():
         pass
 
     @abc.abstractmethod
-    def metric(self):
-        """ Get metric (fix name convention) """
+    def pre_process_function(self):
+        """ Get pre_process_function (fix name convention) """
         pass
 
     @abc.abstractmethod
@@ -245,7 +218,7 @@ class ReaderBase():
 
             # dataset에서 train feature를 생성합니다.
             self.train_dataset = self.train_dataset.map(
-                prepare_features(split='train', tokenizer=self.tokenizer),
+                self.pre_process_function(split='train', tokenizer=self.tokenizer),
                 batched=True,
                 num_proc=self.args.data_args.preprocessing_num_workers,
                 remove_columns=column_names,
@@ -259,7 +232,7 @@ class ReaderBase():
 
             # Validation Feature 생성
             self.eval_dataset = self.eval_dataset.map(
-                prepare_features('valid', tokenizer=self.tokenizer),
+                self.pre_process_function('valid', tokenizer=self.tokenizer),
                 batched=True,
                 num_proc=self.args.data_args.preprocessing_num_workers,
                 remove_columns=column_names,
@@ -270,6 +243,20 @@ class ReaderBase():
         # test_dataset -> validation -> context 없음, only retrieval
 
         self.logger.info("*** Pre-process the Datasets Completed ***")
+
+    def preprocessing_retrieved_doc(self, retrieved_examples:Dataset):
+        """ Pre-process the retrieved validation datasets """
+        # Context가 Retrieved passage로 채워진 validation set에 대해 전처리를 수행합니다.
+        column_names = retrieved_examples.column_names
+        retrieved_dataset = retrieved_examples.map(
+            self.pre_process_function('valid', tokenizer=self.tokenizer),
+            batched=True,
+            num_proc=self.args.data_args.preprocessing_num_workers,
+            remove_columns=column_names,
+            load_from_cache_file=not self.args.data_args.overwrite_cache,
+        )
+        self.logger.info("*** Pre-process the Retrieved Dataset Completed ***")
+        return retrieved_dataset
 
     @abc.abstractmethod
     def set_trainer(self):

@@ -24,6 +24,8 @@ from solution.reader import (
     post_processing_function,
     ExtractiveReader,
     GenerativeReader,
+    ext_prepare_features,
+    gen_prepare_features
 )
 from solution.utils import (
     compute_metrics,
@@ -41,8 +43,6 @@ def main():
         level=logging.INFO,
     )
 
-
-
     command_args = get_args_parser()
     parser = HfArgumentParser(
         (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
@@ -57,14 +57,18 @@ def main():
     if model_args.method == 'ext':
         reader = ExtractiveReader(command_args=command_args,
                                     compute_metrics=compute_metrics,
+                                    pre_process_function=ext_prepare_features,
+                                    post_process_function=post_processing_function,
+                                    logger=logger)
+    elif model_args.method == 'gen':
+        reader = GenerativeReader(command_args=command_args,
+                                    compute_metrics=compute_metrics,
+                                    pre_process_function=gen_prepare_features,
                                     post_process_function=post_processing_function,
                                     logger=logger)
     else:
-        reader = GenerativeReader(command_args=command_args,
-                                    compute_metrics=compute_metrics,
-                                    post_process_function=post_processing_function,
-                                    logger=logger)
-    
+        raise ValueError("Check whether model_args.method is 'ext or 'gen'")
+
     '''
     1. answer 존재 유무 : validation of train set / validation of test_set
     2. context retrieval 유무 : eval_retrieval True / False

@@ -16,9 +16,8 @@
 import abc
 from datasets import Dataset
 import torch.nn as nn
-import torch.nn.functional as F
 
-from transformers import AutoModel, AutoModelForSeq2SeqLM, PreTrainedModel
+from transformers import AutoModelForSeq2SeqLM
 from transformers.modeling_outputs import QuestionAnsweringModelOutput
 
 class ReaderModelBase:

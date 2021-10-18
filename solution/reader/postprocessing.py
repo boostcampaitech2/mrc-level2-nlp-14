@@ -34,7 +34,7 @@ from solution.args import (
     NewTrainingArguments,
     ProjectArguments,
 )
-from .constant import (
+from solution.reader.constant import (
     answer_column_name,
 )
 

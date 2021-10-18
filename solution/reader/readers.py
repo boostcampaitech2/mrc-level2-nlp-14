@@ -1,45 +1,27 @@
-import logging
-import os
-import abc
-import time
-import json
-import pickle
 import argparse
-from dataclasses import dataclass
-from functools import partial
 
-from typing import List, Union, Tuple, Optional
+from datasets import Dataset
 
-import scipy
-import numpy as np
-import pandas as pd
+from solution.trainers import QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer
 
-import torch.nn as nn
-import torch.nn.functional as F
+from solution.utils import compute_metrics
 
+from solution.reader.core import ReaderBase
+from solution.reader.postprocessing import post_processing_function
+from solution.reader.preprocessing import ext_prepare_features, gen_prepare_features
 
-from datasets import Dataset, load_metric
-from transformers import PreTrainedModel, AutoModelForQuestionAnswering, AutoModelForSeq2SeqLM, AutoTokenizer
-
-from transformers import AutoModel, AutoModelForSeq2SeqLM
-from transformers.modeling_outputs import QuestionAnsweringModelOutput
-
-from ..trainers import Trainer, QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer
-
-from ..utils import compute_metrics
-
-from .core import ReaderBase
-from . import post_processing_function
 
 class ExtractiveReader(ReaderBase):
     """ Base class for Extractive Reader module """
     def __init__(self, command_args:argparse.Namespace,
                  compute_metrics=compute_metrics,
+                 pre_process_function=ext_prepare_features,
                  post_process_function=post_processing_function,
                  logger=None,):
         self.logger = logger
         self._set_args(command_args)
         self._set_initial_setup()
+        self.pre_process_function = pre_process_function
         self._set_preprocessing()
         self.post_process_function = post_process_function
         self.compute_metrics = compute_metrics
@@ -89,11 +71,13 @@ class GenerativeReader(ReaderBase):
     """ Base class for Generative Reader module """
     def __init__(self, command_args:argparse.Namespace,
                  compute_metrics=compute_metrics,
+                 pre_process_function=gen_prepare_features,
                  post_process_function=post_processing_function,
                  logger=None,):
         self._set_args(command_args)
         self._set_initial_setup()
-        self._set_preprocessing(self.datasets)
+        self.pre_process_function = pre_process_function
+        self._set_preprocessing()
         self.post_process_function = post_process_function
         self.compute_metrics = compute_metrics
         self.trainer = None
@@ -127,7 +111,7 @@ class GenerativeReader(ReaderBase):
                             )
 
         self.logger.info("*** Set up the Trainer ***")
-        
+
         return self.trainer
 
     def train(self, *args, **kwargs):
