@@ -1,56 +1,130 @@
 import os
 import abc
-import time
 import json
-import pickle
-from typing import List, Union, Tuple, Optional
+from typing import List, Union, Tuple, Optional, Callable
 
-import scipy
 from scipy.sparse.csr import csr_matrix
 import numpy as np
 import pandas as pd
-from datasets import Dataset
+from datasets import Sequence, Value, Features, Dataset, DatasetDict
 
-from ..args import DataArguments
-from .retrieve_mixin import FaissMixin, PandasMixin
-
-
-Nested_List = List[List[int]]
+from solution.args import DataArguments
+from solution.retrieval.retrieve_mixin import FaissMixin, PandasMixin
 
 
-def timer(dataset=True):
-    def decorator(func):
-        """ Time decorator """
-        flag = True if dataset else False
-        def wrap_func(self, query_or_dataset, *args, **kwargs):
-            dataset_cond = isinstance(query_or_dataset, Dataset) and flag
-            str_cond = isinstance(query_or_dataset, str) and not flag
-            if dataset_cond or str_cond:
-                t0 = time.time()
-            output = func(self, query_or_dataset, *args, **kwargs)
-            if dataset_cond or str_cond:
-                print(f"[{func.__name__}] done in {time.time() - t0:.3f} s")
-            return output
-        return wrap_func
-    return decorator
+ArrayMatrix = Union[csr_matrix, np.ndarray]
 
 
 class RetrievalBase(FaissMixin, PandasMixin):
-    """ Base class for Retrieval module """
+    """
+    Base class for Retrieval module.
     
-    @abc.abstractproperty
-    def contexts(self):
-        """ Get corpus contexts (fix name convention) """
-        pass
+    Main method:
+        - retrieve: Callable
+        - get_relevant_doc: Callable
+        
+    Abstract method:
+        - get_query_embedding: Callable
+        - get_passage_embedding: Callable
+        - get_topk_documents: Callable
+        
+    Attributes:
+        - contexts: List[str]
+        - contexts_ids: List[int]
+        - p_embedding: ArrayMatrix
+        - context_file_path: str
+        - dataset_path: str
+        - use_faiss: bool
+    """
     
-    @abc.abstractproperty
-    def p_embedding(self):
-        """ Get passage embeddings (fix name convention) """
-        pass
+    def __init__(self, args: DataArguments):
+        self.args = args
+        with open(os.path.join(args.dataset_path, args.context_path), "r", encoding="utf-8") as f:
+            corpus = json.load(f)
+        self._contexts = list(
+            dict.fromkeys([v["text"] for v in corpus.values()])
+        )
+        print(f"Lengths of unique contexts : {len(self.contexts)}")
+        self._context_ids = list(
+            dict.fromkeys([v["document_id"] for v in corpus.values()])
+        )
+        self.get_passage_embedding()
+        
+        if args.use_faiss:
+            self.build_faiss(args.data_path, args.num_clusters)
+            
+    @property
+    def contexts(self) -> List[str]:
+        """
+        Get corpus contexts(fix name convention).
+        When the object is created, contexts are read from the corpus
+        ans assigned as attribute.
+        """
+        return self._contexts
     
-    @abc.abstractproperty
-    def use_faiss(self):
+    @property
+    def contexts_ids(self) -> List[int]:
+        """
+        Get corpus contexts ids(fix name convention).
+        When the object is created, contexts are read from the corpus
+        ans assigned as attribute.
+        """
+        return self._context_ids
+    
+    @property
+    def p_embedding(self) -> ArrayMatrix:
+        """
+        Get passage embeddings(fix name convention).
+        When the object is created, execute the `get_passage_embedding` method
+        to get passage embedding from the context attribute.
+        """
+        return self._p_embedding
+            
+    @property
+    def context_file_path(self) -> str:
+        """ Get context file path. """
+        return os.path.join(self.args.dataset_path, self.args.context_path)
+    
+    @property
+    def dataset_path(self) -> str:
+        """ Get context data path for caching. """
+        return self.args.dataset_path
+    
+    @property
+    def use_faiss(self) -> bool:
         """ Whether to use faiss or not """
+        return self.args.use_faiss
+    
+    @abc.abstractmethod
+    def get_query_embedding(self, query, **kwargs):
+        """
+        Get query embedding.
+        This method is called dynamically 
+        when the `get_relevant_doc` method is executed.
+        """
+        pass
+    
+    @abc.abstractmethod
+    def get_passage_embedding(self, passage, **kwargs):
+        """
+        Get passage embedding.
+        This method is executed when the object is created.
+        For efficient retrieval, the cache file is stored
+        in the `context_file_path` at the first call.
+        """
+        pass
+    
+    @abc.abstractmethod
+    def get_topk_documents(self, query_embs, topk, use_faiss, **kwargs):
+        """
+        Get top-k documents and ids among query and documents.
+        
+        Follow the steps below.
+            1. Calculate the similarity among query and passage embedding
+               based on the given similarity function(`calculate_scores`).
+            2. Returns the top-k documents with the highest similarity and their index.
+            If you use faiss library, faiss does the second job for you.
+        """
         pass
     
     def retrieve(
@@ -60,21 +134,23 @@ class RetrievalBase(FaissMixin, PandasMixin):
         **kwargs,
     ) -> Union[Tuple[List, List], pd.DataFrame]:
         """
+        Retrieves the top k most similar documents from the input query
+        and returns them as `DatasetDict` objects in the huggingface Datasets.
+        
         Arguments:
-            query_or_dataset (Union[str, Dataset]):
-                str이나 Dataset으로 이루어진 Query를 받습니다.
-            topk (Optional[int], optional): Defaults to 1.
-                상위 몇 개의 passage를 사용할 것인지 지정합니다.
+            query_or_dataset: Union[str, Dataset]
+                use bulk or not
+            topk: Optional[int] Defaults to 1
         Returns:
-            1개의 Query를 받는 경우  -> Tuple(List, List)
-            다수의 Query를 받는 경우 -> pd.DataFrame: [description]
-        Note:
-            다수의 Query를 받는 경우,
-                Ground Truth가 있는 Query (train/valid) -> 기존 Ground Truth Passage를 같이 반환합니다.
-                Ground Truth가 없는 Query (test) -> Retrieval한 Passage만 반환합니다.
+            If type of query_or_dataset is string:
+                Tuple[List, List]
+                    first element: document scores
+                    second element: passage corresponding to scores
+            otherwise:
+                pd.DataFrame
         """
         doc_scores, doc_indices = self.get_relevant_doc(query_or_dataset,
-                                                        k=topk,
+                                                        topk=topk,
                                                         use_faiss=self.args.use_faiss,
                                                         **kwargs)
         if isinstance(query_or_dataset, str):
@@ -95,227 +171,24 @@ class RetrievalBase(FaissMixin, PandasMixin):
     def get_relevant_doc(
         self,
         query_or_dataset: Union[str, Dataset],
-        k: int,
+        topk: int,
         use_faiss: bool = False,
         **kwargs,
     ) -> Tuple[List, List]:
         """
-        입력 query에 관련이 있는 상위 k의 document를 검색
+        Retrieve top k documents related to the input query
         
         Arguments:
-            query_or_dataset (Union[str, Dataset]):
-                하나의 Query 혹은 HF.Dataset를 입력으로 받음
-            k (int):
-                상위 몇 개의 pasaage를 반환할지 결정
+            query_or_dataset: Union[str, Dataset]
+                use bulk or not
+            topk: Optional[int] Defaults to 1
+            use_faiss: bool
         Returns:
-            document score (List):
+            document score: List[int]
                 입력 query에 대한 topk document 유사도
-            document indices (List):
+            document indices: List[str]
                 입력 query에 대한 topk document 인덱스
         """
-        query_emb = self.get_query_embedding(query_or_dataset, **kwargs)
-        doc_scores, doc_indices = self.get_topk_similarity(query_emb, k, use_faiss, **kwargs)
+        query_embs = self.get_query_embedding(query_or_dataset, **kwargs)
+        doc_scores, doc_indices = self.get_topk_documents(query_embs, topk, use_faiss, **kwargs)
         return doc_scores, doc_indices
-        
-    @abc.abstractmethod
-    def get_query_embedding(self, query, **kwargs):
-        """ Get query embedding """
-        pass
-    
-    @abc.abstractmethod
-    def get_topk_similarity(self, query_emb, k, use_faiss, **kwargs):
-        """ Get top-k similarity among query and documents """
-        pass
-        
-
-class SparseRetrieval(RetrievalBase):
-    """ Base class for Sparse Retrieval module """
-    
-    def __init__(self, args: DataArguments):
-        self.args = args
-        self.data_path = args.dataset_path
-        self.context_filename = args.context_path
-        with open(os.path.join(self.data_path, args.context_path), "r", encoding="utf-8") as f:
-            corpus = json.load(f)
-        self._contexts = list(
-            dict.fromkeys([v["text"] for v in corpus.values()])
-        )
-        print(f"Lengths of unique contexts : {len(self.contexts)}")
-        self.ids = list(range(len(self._contexts)))
-        self._p_embedding = None        
-        self._build_vectorizer()
-        
-        # initialize passage embedding and fit the model
-        _ = self.p_embedding
-        
-        if args.use_faiss:
-            self.build_faiss(args.data_path, args.num_clusters)
-            
-    @property
-    def use_faiss(self):
-        """ Whether to use faiss or not """
-        return self.args.use_faiss
-        
-    @property
-    def vectorizer(self):
-        """
-        Get vectorizer to vectorize query and passages.
-        If self._vectorizer is None, raise AttributeError.
-        """
-        vectorizer = self._vectorizer
-        if vectorizer is None:
-            raise AttributeError("There is no vectorizer. "
-                                 "Implement `build_vectorizer` method "
-                                 "and run it in the constructor.")
-        return vectorizer
-    
-    @vectorizer.setter
-    def vectorizer(self, vec_object):
-        """ Set vectorizer to vectorize query and passages. """
-        if not all(hasattr(vec_object, attr) for attr in ["fit", "fit_transform", "transform"]):
-            raise AttributeError("This vectorizer hasn't `fit`, `fit_transform`, `transform` method.")
-        self._vectorizer = vec_object
-        
-    @property
-    def contexts(self):
-        """ Get corpus contexts (fix name convention) """
-        return self._contexts
-    
-    @property
-    def p_embedding(self):
-        """
-        Get passage embeddings (fix name convention)
-        If self._p_embedding is None,
-        run self.get_sparse_embedding method to get passage embedding.
-        """
-        p_embedding = self._p_embedding
-        if p_embedding is None:
-            p_embedding = self.get_sparse_embedding()
-            self._p_embedding = p_embedding
-        return p_embedding
-    
-    @abc.abstractmethod
-    def build_vectorizer(self):
-        """
-        Build user-used vectorizer.
-        You must implement this method to get vectorizer.
-        """
-        pass
-    
-    def _build_vectorizer(self):
-        """ private method for build vectorizer method. """
-        self.vectorizer = self.build_vectorizer()
-    
-    def get_sparse_embedding(self):
-        """
-        Passage Embedding을 만들고
-        TFIDF와 Embedding을 pickle로 저장합니다.
-        만약 미리 저장된 파일이 있으면 저장된 pickle을 불러옵니다.
-        """
-        pickle_name = f"sparse_embedding.bin"
-        tfidfv_name = f"tfidv.bin"
-        emb_path = os.path.join(self.data_path, pickle_name)
-        tfidfv_path = os.path.join(self.data_path, tfidfv_name)
-        
-        if os.path.isfile(emb_path) and os.path.isfile(tfidfv_path):
-            with open(emb_path, "rb") as file:
-                p_embedding = pickle.load(file)
-            with open(tfidfv_path, "rb") as file:
-                self.vectorizer = pickle.load(file)
-            print("Embedding pickle load.")
-        else:
-            print("Build passage embedding")
-            p_embedding = self.vectorizer.fit_transform(self.contexts)
-            with open(emb_path, "wb") as file:
-                pickle.dump(self.p_embedding, file)
-            with open(tfidfv_path, "wb") as file:
-                pickle.dump(self.tfidfv, file)
-            print("Embedding pickle saved.")
-                
-        return p_embedding
-    
-    @timer(dataset=True)
-    def get_relevant_doc(
-        self,
-        query_or_dataset: Union[str, Dataset],
-        k: int,
-        use_faiss: bool = False,
-        **kwargs,
-    ) -> Tuple[List, List]:
-        return super().get_relevant_doc(query_or_dataset,
-                                        k, use_faiss, **kwargs)
-    
-    @timer(dataset=False)
-    def get_query_embedding(self, query_or_dataset: Union[str, Dataset]) -> csr_matrix:
-        """
-        Get query embedding using vectorizer.
-        
-        Arguments:
-            query_or_dataset (Union[str, Dataset]):
-                하나의 Query 혹은 HF.Dataset를 입력으로 받음
-        Returns:
-            query_emb (scipy.sparse.csr.csr_matrix):
-                query embedding
-        """
-        if isinstance(query_or_dataset, Dataset):
-            query = query_or_dataset["question"]
-        else:
-            query = [query_or_dataset]
-        query_emb = self.vectorizer.transform(query)
-        assert np.sum(query_emb) != 0
-        return query_emb
-    
-    @timer(dataset=False)
-    def get_topk_similarity(
-        self, 
-        query_emb: Union[csr_matrix, np.ndarray], 
-        k: int,
-        use_faiss: bool,
-    ) -> Tuple[Nested_List, Nested_List]:
-        """
-        Get top-k similarity among query and documents
-        
-        Arguments:
-            query_emb (Union[csr_matrix, np.ndarray]):
-        Returns:
-            document score (List):
-                입력 query에 대한 topk document 유사도
-            document indices (List):
-                입력 query에 대한 topk document 인덱스
-        """
-        if use_faiss:
-            docs_scores, doc_indices = self.get_similarity_with_faiss(query_emb)
-        else:
-            result = query_emb * self.p_embedding.T
-            if not isinstance(result, np.ndarray):
-                result = result.toarray()
-            # batchify
-            doc_scores = np.partition(result, -k)[:, -k:][:, ::-1]
-            ind = np.argsort(doc_scores, axis=-1)[:, ::-1]
-            doc_scores = np.sort(doc_scores, axis=-1)[:, ::-1].tolist()
-            doc_indices = np.argpartition(result, -k)[:, -k:][:, ::-1]
-            r, c = ind.shape
-            ind += np.tile(np.arange(r).reshape(-1, 1), (1, c)) * c
-            doc_indices = doc_indices.ravel()[ind].reshape(r, c).tolist()
-        return doc_scores, doc_indices
-        
-    def get_topk_similarity_with_faiss(self, query_emb, k):
-        """
-        Get top-k similarity among query and documents with faiss
-        
-        Arguments:
-            query_emb (Union[csr_matrix, np.ndarray]):
-        Returns:
-            document score (List):
-                입력 query에 대한 topk document 유사도
-            document indices (List):
-                입력 query에 대한 topk document 인덱스
-        """
-        query_emb = query_emb.toarray().astype(np.float32)
-        doc_scores, doc_indices = self.indexer.search(query_emb, k)
-        return doc_scores, doc_indices
-
-
-class DenseRetrieval(RetrievalBase):
-    """ Base class for Dense Retrieval module """
-    pass

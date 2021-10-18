@@ -12,6 +12,7 @@ DataArguments:
   use_faiss: False
   sp_max_features: 50000
   sp_ngram_range: (1,2)
+  sp_tokenizer: klue/bert-base
   
 ModelingArguments:
   model_name_or_path: bert-base-multilingual-cased
