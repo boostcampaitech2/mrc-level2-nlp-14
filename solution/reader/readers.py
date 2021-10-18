@@ -22,7 +22,7 @@ class ExtractiveReader(ReaderBase):
         self._set_args(command_args)
         self._set_initial_setup()
         self.pre_process_function = pre_process_function
-        self.set_preprocessing()
+        self._set_preprocessing()
         self.post_process_function = post_process_function
         self.compute_metrics = compute_metrics
         self.trainer = None
@@ -32,10 +32,6 @@ class ExtractiveReader(ReaderBase):
 
         eval_dataset = self.eval_dataset
         eval_samples = self.datasets['validation']
-        # # Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
-        # if retrieved_dataset is not None:
-        #     eval_dataset = self.preprocessing_retrieved_doc(retrieved_dataset['validation'])
-        #     eval_samples = retrieved_dataset['validation']
         
         """ Set Trainer """
         self.trainer = QuestionAnsweringTrainer( 
@@ -54,10 +50,21 @@ class ExtractiveReader(ReaderBase):
                             post_process_function=self.post_process_function,
                             compute_metrics=self.compute_metrics,
                             )
+
         self.logger.info("*** Set up the Trainer ***")
+
         return self.trainer
     
+    def train(self, *args, **kwargs):
+        """ Call train method of self.trainer """
+        return self.trainer.train(*args, **kwargs)
+
+    def evaluate(self, *args, **kwargs):
+        """ Call evaluate method of self.trainer """
+        return self.trainer.evaluate(*args, **kwargs)
+
     def predict(self, *args, **kwargs):
+        """ Call predict method of self.trainer """
         return self.trainer.predict(*args, **kwargs)
 
 class GenerativeReader(ReaderBase):
@@ -70,7 +77,7 @@ class GenerativeReader(ReaderBase):
         self._set_args(command_args)
         self._set_initial_setup()
         self.pre_process_function = pre_process_function
-        self.set_preprocessing(self.datasets)
+        self._set_preprocessing()
         self.post_process_function = post_process_function
         self.compute_metrics = compute_metrics
         self.trainer = None
@@ -102,8 +109,19 @@ class GenerativeReader(ReaderBase):
                             post_process_function=self.post_processing_function,
                             compute_metrics=self.compute_metric,
                             )
+
         self.logger.info("*** Set up the Trainer ***")
+
         return self.trainer
 
+    def train(self, *args, **kwargs):
+        """ Call train method of self.trainer """
+        return self.trainer.train(*args, **kwargs)
+
+    def evaluate(self, *args, **kwargs):
+        """ Call evaluate method of self.trainer """
+        return self.trainer.evaluate(*args, **kwargs)
+
     def predict(self, *args, **kwargs):
+        """ Call predict method of self.trainer """
         return self.trainer.predict(*args, **kwargs)

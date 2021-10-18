@@ -20,25 +20,6 @@ import torch.nn as nn
 from transformers import AutoModelForSeq2SeqLM
 from transformers.modeling_outputs import QuestionAnsweringModelOutput
 
-# from .core import ReaderModelBase # 
-"""예외가 발생했습니다. ImportError       (note: full exception trace is shown but execution is paused at: <module>)
-cannot import name 'ReaderModelBase' from partially initialized module 'solution.reader.core' (most likely due to a circular import) (/opt/ml/mrc-level2-nlp-14/solution/reader/core.py)
-  File "/opt/ml/mrc-level2-nlp-14/solution/reader/reader_models.py", line 25, in <module> (Current frame)
-    from .core import ReaderModelBase
-  File "/opt/ml/mrc-level2-nlp-14/solution/reader/core.py", line 71, in <module>
-    from .reader_models import READER_MODEL
-  File "/opt/ml/mrc-level2-nlp-14/solution/reader/readers.py", line 31, in <module>
-    from .core import ReaderBase
-  File "/opt/ml/mrc-level2-nlp-14/solution/reader/__init__.py", line 8, in <module>
-    from .readers import (
-  File "/opt/ml/mrc-level2-nlp-14/solution/__init__.py", line 1, in <module>
-    from . import args, models, reader, retrieve, trainers, utils
-  File "/opt/ml/mrc-level2-nlp-14/new_run.py", line 11, in <module>
-    from solution.args import (
-        -> ReaderModelBase 이 파일로 이동
-        """
-
-
 class ReaderModelBase:
     """ Base class for Reader Model module """
     
@@ -50,11 +31,12 @@ class ReaderModelBase:
     @abc.abstractmethod
     def set_trainer(self, retrieved_dataset:Dataset=None):
         """ Set up the Trainer """
+        pass
 
     @abc.abstractmethod
     def predict(self, *args, **kwargs):
-        """ Set up the Trainer """
-        
+        """ Call predict """
+        pass        
 
 class ExtractiveReaderModel(nn.Module, ReaderModelBase):
     """
@@ -141,10 +123,10 @@ class ExtractiveReaderBaselineModel(ExtractiveReaderModel):
             attentions=outputs.attentions,
         )
 
-class ExtractiveMLPModel(ExtractiveReaderBaselineModel):
+class ExtractiveReaderMLPModel(ExtractiveReaderBaselineModel):
     """ Deeper MLP Head """
     def __init__(self, input_size):
-        super().__init__()
+        super(ExtractiveReaderMLPModel, self).__init__(backbone, input_size)
         self.qa_outputs = None if input_size is None else nn.Sequential(
                         nn.Linear(input_size, input_size * 4, bias=False),
                         nn.Linear(input_size * 4, input_size, bias=False),
@@ -161,7 +143,7 @@ class GenerativeReaderModel(AutoModelForSeq2SeqLM, ReaderModelBase):
 READER_MODEL = {'ext' : { model.__mro__[0].__name__ : model for model in
                             [
                                 ExtractiveReaderBaselineModel,
-                                ExtractiveMLPModel,
+                                ExtractiveReaderMLPModel,
                             ]},
                 'gen' : { model.__mro__[0].__name__ : model for model in 
                             [

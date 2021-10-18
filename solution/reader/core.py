@@ -23,7 +23,7 @@ import argparse
 from dataclasses import dataclass
 
 from datasets import load_from_disk, Dataset
-from transformers import AutoConfig, AutoTokenizer
+from transformers import AutoConfig, AutoTokenizer, AutoModel
 
 from transformers import (
     DataCollatorWithPadding,
@@ -42,98 +42,82 @@ from solution.utils import (
     check_no_error,
 )
 
-from .reader_models import READER_MODEL
+from solution.reader.reader_models import READER_MODEL
 
 class ReaderBase():
     """ Base class for Reader module """
-
-    # @property
-    @abc.abstractmethod
-    def model_config(self):
-        """ Get model_config (fix name convention) """
-        pass
-
-    # @property
-    @abc.abstractmethod
-    def model(self):
-        """ Get model (fix name convention) """
-        pass
-
-    # @property
-    @abc.abstractmethod
-    def tokenizer(self):
-        """ Get tokenizer (fix name convention) """
-        pass
-
-    # @property
-    @abc.abstractmethod
-    def metric(self):
-        """ Get metric (fix name convention) """
-        pass
-
-    # @property
-    @abc.abstractmethod
-    def trainer(self):
-        """ Get trainer (fix name convention) """
-        pass
-
-    # @property
+    
     @abc.abstractmethod
     def data_collator(self):
         """ Get dataset (fix name convention) """
         pass
 
-    # @property
     @abc.abstractmethod
     def datasets(self):
         """ Get train_dataset (fix name convention) """
         pass
 
-    # @property
     @abc.abstractmethod
     def train_dataset(self):
         """ Get train_dataset (fix name convention) """
         pass
 
-    # @property
     @abc.abstractmethod
     def eval_dataset(self):
         """ Get eval_dataset (fix name convention) """
         pass
 
-    # @property
     @abc.abstractmethod
     def retrieved_eval_dataset(self):
         """ Get eval_dataset (fix name convention) """
         pass
 
-    # @property
-    @abc.abstractmethod
-    def pre_process_function(self):
-        """ Get pre_process_function (fix name convention) """
-        pass
-
-    # @property
     @abc.abstractmethod
     def post_process_function(self):
         """ Get post_process_function (fix name convention) """
         pass
 
-
-    # @property
-    @abc.abstractmethod
-    def last_checkpoint(self):
-        """ Get post_process_function (fix name convention) """
-        pass
-
-    # @property
     @abc.abstractmethod
     def max_seq_length(self):
         """ Get post_process_function (fix name convention) """
         pass
 
+    @abc.abstractmethod
+    def model_config(self):
+        """ Get model_config (fix name convention) """
+        pass
+
+    @abc.abstractmethod
+    def model(self):
+        """ Get model (fix name convention) """
+        pass
+
+    @abc.abstractmethod
+    def tokenizer(self):
+        """ Get tokenizer (fix name convention) """
+        pass
+
+    @abc.abstractmethod
+    def pre_process_function(self):
+        """ Get pre_process_function (fix name convention) """
+        pass
+
+    @abc.abstractmethod
+    def trainer(self):
+        """ Get trainer (fix name convention) """
+        pass
+
+    @abc.abstractmethod
+    def last_checkpoint(self):
+        """ Get post_process_function (fix name convention) """
+        pass
+
     def _set_args(self, command_args:argparse.Namespace):
-        """ Set arguments"""
+        """
+        Arguments:
+            command_args (argparse.Namespace):
+                main() 함수에서 생성한 command_args를 받습니다.
+        """
         parser = HfArgumentParser(
             (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
         )
@@ -166,14 +150,12 @@ class ReaderBase():
                          project_args=project_args)
 
     def _set_initial_setup(self):
-        
         """ Initial Set up attributes """
+        # Seed를 고정하고 전체 데이터셋과 train, test set을 불러옵니다.
         set_seed(self.args.training_args.seed)
         self.datasets = load_from_disk(self.args.data_args.dataset_name)
         root_data_dir = os.path.dirname(self.args.data_args.dataset_name)
         self.test_datasets = load_from_disk(os.path.join(root_data_dir, 'test_dataset'))
-        print('train_datasets : \n',self.datasets)
-        print('test_datasets : \n',self.test_datasets)
 
         # AutoConfig를 이용하여 pretrained model 과 tokenizer를 불러옵니다.
         # argument로 원하는 모델 이름을 설정하면 옵션을 바꿀 수 있습니다.
@@ -206,7 +188,7 @@ class ReaderBase():
             self.tokenizer, pad_to_multiple_of=8 if self.args.training_args.fp16 else None
         )
 
-        print(
+        self.logger.info(
             type(self.args.training_args),
             type(self.args.model_args),
             type(self.datasets),
@@ -215,23 +197,7 @@ class ReaderBase():
         )
         self.logger.info("*** Initial set-up of the Reader Model Completed ***")
 
-
-    def preprocessing_retrieved_doc(self, retrieved_examples:Dataset):
-        """ Pre-process the retrieved validation datasets """
-        # Context가 Retrieved passage로 채워진 validation set에 대해 전처리를 수행합니다.
-        column_names = retrieved_examples.column_names
-        retrieved_dataset = retrieved_examples.map(
-            self.pre_process_function('valid', tokenizer=self.tokenizer),
-            batched=True,
-            num_proc=self.args.data_args.preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=not self.args.data_args.overwrite_cache,
-        )
-        self.logger.info("*** Pre-process the Retrieved Dataset Completed ***")
-        return retrieved_dataset
-
-
-    def set_preprocessing(self):
+    def _set_preprocessing(self):
         """ Pre-process the datasets """
         # dataset을 전처리합니다.
         # training과 evaluation에서 사용되는 전처리는 아주 조금 다른 형태를 가집니다.
@@ -244,7 +210,6 @@ class ReaderBase():
         self.last_checkpoint, max_seq_length = check_no_error(
             self.args.data_args, self.args.training_args, self.datasets, self.tokenizer
         )
-        
         
         if self.args.training_args.do_train:
             if "train" not in self.datasets:
@@ -279,7 +244,36 @@ class ReaderBase():
 
         self.logger.info("*** Pre-process the Datasets Completed ***")
 
+    def preprocessing_retrieved_doc(self, retrieved_examples:Dataset):
+        """ Pre-process the retrieved validation datasets """
+        # Context가 Retrieved passage로 채워진 validation set에 대해 전처리를 수행합니다.
+        column_names = retrieved_examples.column_names
+        retrieved_dataset = retrieved_examples.map(
+            self.pre_process_function('valid', tokenizer=self.tokenizer),
+            batched=True,
+            num_proc=self.args.data_args.preprocessing_num_workers,
+            remove_columns=column_names,
+            load_from_cache_file=not self.args.data_args.overwrite_cache,
+        )
+        self.logger.info("*** Pre-process the Retrieved Dataset Completed ***")
+        return retrieved_dataset
+
     @abc.abstractmethod
     def set_trainer(self):
-        """ Get Hugginface Trainer """
+        """ Set Hugginface Trainer """
+        pass
+
+    @abc.abstractmethod
+    def train(self, *args, **kwargs):
+        """ Call train method of self.trainer """
+        pass
+
+    @abc.abstractmethod
+    def evaluate(self, *args, **kwargs):
+        """ Call evaluate method of self.trainer """
+        pass
+
+    @abc.abstractmethod
+    def predict(self, *args, **kwargs):
+        """ Call predict method of self.trainer """
         pass

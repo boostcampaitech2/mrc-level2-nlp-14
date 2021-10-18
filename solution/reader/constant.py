@@ -1,3 +1,3 @@
-question_column_name = "question"
-context_column_name = "context"
-answer_column_name = "answers"
+QUESTION_COLUMN_NAME = "question"
+CONTEXT_COLUMN_NAME = "context"
+ANSWER_COLUMN_NAME = "answers"
