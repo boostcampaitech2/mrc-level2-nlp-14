@@ -72,12 +72,24 @@ class DataArguments:
         default=False,
         metadata={"help": "Whether to build with faiss"}
     )
+    retrieval_mode: bool = field(
+        default="sparse",
+        metadata={"help": ""}
+    )
     retrieval_name: bool = field(
         default="tfidf",
         metadata={"help": ""}
     )
-    es_index_name: bool = field(
+    index_name: bool = field(
         default="wiki",
+        metadata={"help": ""}
+    )
+    stopword_path: str = field(
+        default="user_dic/my_stop_dic.txt",
+        metadata={"help": ""}
+    )
+    decompound_mode: str = field(
+        default="mixed",
         metadata={"help": ""}
     )
     sp_max_features: int = field(
@@ -88,7 +100,79 @@ class DataArguments:
         default=(1,2),
         metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
     )
-    sp_tokenizer: str = field(
+    tokenizer_name: str = field(
         default="mecab",
         metadata={"help": ""}
+    )
+    b: float = field(
+        default=0.75,
+        metadata={"help": "[0.3 ~ 0.8]"}
+    )
+    k1: float = field(
+        default=1.2,
+        metadata={"help": "[1.2 ~ 2.0]"}
+    )
+    es_host_address: str = field(
+        default="localhost:9200",
+        metadata={"help": ""}
+    )
+    use_korean_stopwords: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    use_korean_synonyms: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    lowercase: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    stopword_path: str = field(
+        default="user_dic/my_stop_dic.txt",
+        metadata={"help": ""}
+    )
+    nori_readingform: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    cjk_bigram: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    decimal_digit: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    dfr_basic_model: str = field(
+        default="g",
+        metadata={"help": "[g, if, in, ine]"}
+    )
+    dfr_after_effect: str = field(
+        default="l",
+        metadata={"help": "[b, l]"}
+    )
+    es_normalization: str = field(
+        default="h2",
+        metadata={"help": "[no, h1, h2, h3, z]"}
+    )
+    dfi_measure: str = field(
+        default="standardized",
+        metadata={"help": "[standardized, saturated, chisquared]"}
+    )
+    ib_distribution: str = field(
+        default="ll",
+        metadata={"help": "[ll, spl]"}
+    )
+    ib_lambda: = field(
+        default="df",
+        metadata={"help": "[df, ttf]"}
+    )
+    lmd_mu: int = field(
+        default=2000,
+        metadata={"help": ""}
+    )
+    lmjm_lambda: float = field(
+        default=0.1,
+        metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
     )
