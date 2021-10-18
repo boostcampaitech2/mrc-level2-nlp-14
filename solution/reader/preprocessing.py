@@ -18,9 +18,9 @@ from solution.args import (
     ProjectArguments
 )
 from .constant import (
-    question_column_name,
-    context_column_name,
-    answer_column_name,
+    QUESTION_COLUMN_NAME,
+    CONTEXT_COLUMN_NAME,
+    ANSWER_COLUMN_NAME,
 )
 
 def tokenize_examples(examples, tokenizer):
@@ -36,8 +36,8 @@ def tokenize_examples(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
     # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
     tokenized_examples = tokenizer(
-        examples[question_column_name if pad_on_right else context_column_name],
-        examples[context_column_name if pad_on_right else question_column_name],
+        examples[QUESTION_COLUMN_NAME if pad_on_right else CONTEXT_COLUMN_NAME],
+        examples[CONTEXT_COLUMN_NAME if pad_on_right else QUESTION_COLUMN_NAME],
         truncation="only_second" if pad_on_right else "only_first",
         max_length=max_seq_length,
         stride=data_args.doc_stride,
@@ -73,7 +73,7 @@ def prepare_train_features(examples, tokenizer):
 
         # 하나의 example이 여러개의 span을 가질 수 있습니다.
         sample_index = sample_mapping[i]
-        answers = examples[answer_column_name][sample_index]
+        answers = examples[ANSWER_COLUMN_NAME][sample_index]
 
         # answer가 없을 경우 cls_index를 answer로 설정합니다(== example에서 정답이 없는 경우 존재할 수 있음).
         if len(answers["answer_start"]) == 0:

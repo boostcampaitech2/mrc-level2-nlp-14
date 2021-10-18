@@ -53,7 +53,6 @@ def main():
     # Set-up WANDB
     os.environ["WANDB_PROJECT"] = project_args.wandb_project
 
-    print(data_args)
     # Reader 모델 통합 관리 객체. 생성시에 데이터셋 및 모델 세팅 수행됨
     if model_args.method == 'ext':
         reader = ExtractiveReader(command_args=command_args,
@@ -81,7 +80,7 @@ def main():
     print(f"model is from {reader.args.model_args.model_name_or_path}")
     print(f"data is from {reader.args.data_args.dataset_name}")
 
-    # do_train mrc model 혹은 do_eval mrc model
+    # do_train mrc model
     if reader.args.training_args.do_train:
         if reader.last_checkpoint is not None:
             checkpoint = reader.last_checkpoint
