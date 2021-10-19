@@ -18,12 +18,12 @@ mod = sys.modules[__name__]
 def ext_model_init(model_args):
     """ Initialization function for basic models """
     config = AutoConfig.from_pretrained(
-                model_args.config_name
-                if model_args.config_name
-                else model_args.model_name_or_path,
-            )
+        model_args.config_name
+        if model_args.config_name
+        else model_args.model_name_or_path,
+    )
     for key, value in asdict(model_args).items():
-            setattr(config, key, value)
+        setattr(config, key, value)
     model_cls = getattr(mod, model_args.architectures,
                         AutoModelForQuestionAnswering)
     model = model_cls.from_pretrained(
