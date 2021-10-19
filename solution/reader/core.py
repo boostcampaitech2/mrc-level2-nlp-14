@@ -14,38 +14,49 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
-import sys
 import abc
 
-import argparse
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from datasets import load_from_disk, Dataset
-from transformers import AutoConfig, AutoTokenizer, AutoModel
+from numpy.core.numeric import NaN
+from transformers import AutoTokenizer
+from functools import partial
 
 from transformers import (
+    AutoTokenizer,
     DataCollatorWithPadding,
     set_seed,
 )
 
 from solution.args import (
-    HfArgumentParser,
     DataArguments,
     NewTrainingArguments,
     ModelingArguments,
-    ProjectArguments,
 )
 
 from solution.utils import (
     check_no_error,
 )
 
-from solution.reader.reader_models import READER_MODEL
+from solution.reader.extractive_models import EXT_MODEL_INIT_FUNC
+from solution.reader.generative_models import GEN_MODEL_INIT_FUNC
+
 
 class ReaderBase():
     """ Base class for Reader module """
+    
+    def __init__(self, data_args, training_args, model_args):
+        @dataclass
+        class Args:
+            model_args: ModelingArguments
+            data_args: DataArguments
+            training_args: NewTrainingArguments
+
+        self.args = Args(model_args=model_args,
+                        data_args=data_args,
+                        training_args=training_args)
     
     @abc.abstractmethod
     def data_collator(self):
@@ -88,8 +99,8 @@ class ReaderBase():
         pass
 
     @abc.abstractmethod
-    def model(self):
-        """ Get model (fix name convention) """
+    def model_init(self):
+        """ Get model init function (fix name convention) """
         pass
 
     @abc.abstractmethod
@@ -112,42 +123,7 @@ class ReaderBase():
         """ Get post_process_function (fix name convention) """
         pass
 
-    def _set_args(self, command_args:argparse.Namespace):
-        """
-        Arguments:
-            command_args (argparse.Namespace):
-                main() 함수에서 생성한 command_args를 받습니다.
-        """
-        parser = HfArgumentParser(
-            (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
-        )
-        data_args, training_args, model_args, project_args = \
-            parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
-
-        print(f"model is from {model_args.model_name_or_path}")
-        print(f"data is from {data_args.dataset_name}")
-
-        # logging 설정
-        logging.basicConfig(
-            format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",
-            datefmt="%m/%d/%Y %H:%M:%S",
-            handlers=[logging.StreamHandler(sys.stdout)],
-        )
-
-        # verbosity 설정 : Transformers logger의 정보로 사용합니다 (on main process only)
-        self.logger.info("Training/evaluation parameters %s", training_args)
-
-        @dataclass
-        class Args:
-            model_args: ModelingArguments
-            data_args: DataArguments
-            training_args: NewTrainingArguments
-            project_args: ProjectArguments
-
-        self.args = Args(model_args=model_args,
-                         data_args=data_args,
-                         training_args=training_args,
-                         project_args=project_args)
+    
 
     def _set_initial_setup(self):
         """ Initial Set up attributes """
@@ -159,11 +135,6 @@ class ReaderBase():
 
         # AutoConfig를 이용하여 pretrained model 과 tokenizer를 불러옵니다.
         # argument로 원하는 모델 이름을 설정하면 옵션을 바꿀 수 있습니다.
-        self.model_config = AutoConfig.from_pretrained(
-            self.args.model_args.config_name
-            if self.args.model_args.config_name
-            else self.args.model_args.model_name_or_path,
-        )
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.args.model_args.tokenizer_name
             if self.args.model_args.tokenizer_name
@@ -173,13 +144,20 @@ class ReaderBase():
             # rust version이 비교적 속도가 빠릅니다.
             use_fast=True,
         )
+        
+        if self.args.model_args.method == "ext":
+            _model_init = EXT_MODEL_INIT_FUNC.get(self.args.model_args.model_init)
+        elif self.args.model_args.method == "gen":
+            _model_init = GEN_MODEL_INIT_FUNC.get(self.args.model_args.model_init)
 
-        backbone = AutoModel.from_pretrained(pretrained_model_name_or_path=self.args.model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in self.args.model_args.model_name_or_path),
-            config=self.model_config)
-        # TODO Find Better Way
-        self.model = READER_MODEL[self.args.model_args.method][self.args.model_args.architectures](
-        backbone=backbone, input_size=backbone.config.hidden_size)
+        if _model_init is None:
+            raise ValueError("Check whether model_init is properly set or not")
+
+        self.model_init = partial(_model_init,
+                            model_args=self.args.model_args,
+                            )
+
+
 
         # Data collator
         # flag가 True이면 이미 max length로 padding된 상태입니다.
@@ -193,7 +171,7 @@ class ReaderBase():
             type(self.args.model_args),
             type(self.datasets),
             type(self.tokenizer),
-            type(self.model),
+            type(self.model_init),
         )
         self.logger.info("*** Initial set-up of the Reader Model Completed ***")
 

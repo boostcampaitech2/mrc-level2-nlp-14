@@ -9,22 +9,21 @@ from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
-    TrainingArguments,
     NewTrainingArguments,
     ModelingArguments,
     ProjectArguments
 )
 from solution.retrieval import run_retrieval
 from solution.reader import (
-    post_processing_function,
     ExtractiveReader,
     GenerativeReader,
-    ext_prepare_features,
-    gen_prepare_features
 )
 from solution.utils import (
     set_seed,
     compute_metrics,
+    post_processing_function,
+    ext_prepare_features,
+    gen_prepare_features
 )
 
 
@@ -50,13 +49,13 @@ def main(command_args):
 
     # Reader 모델 통합 관리 객체. 생성시에 데이터셋 및 모델 세팅 수행됨
     if model_args.method == 'ext':
-        reader = ExtractiveReader(command_args=command_args,
+        reader = ExtractiveReader(data_args=data_args, training_args=training_args, model_args=model_args,
                                     compute_metrics=compute_metrics,
                                     pre_process_function=ext_prepare_features,
                                     post_process_function=post_processing_function,
                                     logger=logger)
     elif model_args.method == 'gen':
-        reader = GenerativeReader(command_args=command_args,
+        reader = GenerativeReader(data_args=data_args, training_args=training_args, model_args=model_args,
                                     compute_metrics=compute_metrics,
                                     pre_process_function=gen_prepare_features,
                                     post_process_function=post_processing_function,
@@ -75,9 +74,14 @@ def main(command_args):
 
     # Trainer 객체 설정. Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
     reader.set_trainer()
-    print(reader.model)
     print(f"model is from {reader.args.model_args.model_name_or_path}")
     print(f"data is from {reader.args.data_args.dataset_name}")
+
+    # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
+    # See solution.reader.postprocessing L326-336
+    do_predict = reader.args.training_args.do_predict
+    if reader.args.training_args.do_predict:
+        reader.args.training_args.do_predict = False
 
     # do_train mrc model
     if reader.args.training_args.do_train:
@@ -110,7 +114,7 @@ def main(command_args):
         reader.trainer.state.save_to_json(
             os.path.join(reader.args.training_args.output_dir, "trainer_state.json")
         )
-        
+
     # Evaluation
     # train_dataset['validation']으로 성능을 평가합니다. retrieval 활용 여부에 따라
     # 1. eval_retrieval == False : MRC Model의 단독 성능 평가
@@ -118,11 +122,6 @@ def main(command_args):
     
     # See solution.reader.postprocessing L326-336
     if reader.args.training_args.do_eval:
-        # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
-        do_predict = reader.args.training_args.do_predict
-        if reader.args.training_args.do_predict:
-            reader.args.training_args.do_predict = False
-
         retrieved_dataset = None
         retrieved_examples = None
         if reader.args.data_args.eval_retrieval:
@@ -142,8 +141,8 @@ def main(command_args):
         reader.trainer.log_metrics("eval", metrics)
         reader.trainer.save_metrics("eval", metrics)
 
-        if do_predict:
-            reader.args.training_args.do_predict = True
+    if do_predict:
+        reader.args.training_args.do_predict = True
     
     # Submission
     if reader.args.training_args.do_predict:

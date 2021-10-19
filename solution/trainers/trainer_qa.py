@@ -13,7 +13,7 @@ from transformers.trainer_utils import (
 )
 from transformers.debug_utils import DebugOption
 
-from solution.traniers.core import BaseTrainer
+from solution.trainers.core import BaseTrainer
 
 
 if is_datasets_available():
