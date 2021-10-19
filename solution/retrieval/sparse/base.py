@@ -103,7 +103,9 @@ class SparseRetrieval(RetrievalBase):
         emb_path = os.path.join(self.dataset_path, pickle_name)
         vectorizer_path = os.path.join(self.dataset_path, vectorizer_path)
         
-        if os.path.isfile(emb_path) and os.path.isfile(vectorizer_path):
+        if (not self.args.rebuilt_index and
+            os.path.isfile(emb_path) and 
+            os.path.isfile(vectorizer_path)):
             with open(emb_path, "rb") as file:
                 self._p_embedding = pickle.load(file)
             with open(vectorizer_path, "rb") as file:

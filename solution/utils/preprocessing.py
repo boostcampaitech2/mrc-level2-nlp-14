@@ -14,7 +14,7 @@ from solution.args import (
     NewTrainingArguments,
     ProjectArguments
 )
-from solution.reader.constant import (
+from solution.utils.constant import (
     QUESTION_COLUMN_NAME,
     CONTEXT_COLUMN_NAME,
     ANSWER_COLUMN_NAME,

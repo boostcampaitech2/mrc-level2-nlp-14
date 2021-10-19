@@ -1,4 +1,4 @@
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from solution.args import DataArguments
 from solution.retrieval.sparse.base import SparseRetrieval
@@ -12,6 +12,7 @@ class TfidfRetrieval(SparseRetrieval):
             tokenizer=self.tokenize_fn,
             ngram_range=args.sp_ngram_range,
             max_features=args.sp_max_features,
+            lowercase=args.lowercase,
         )
         super().__init__(args)
         self.enable_batch = True

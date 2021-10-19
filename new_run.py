@@ -1,11 +1,9 @@
-import logging
 import os
 import sys
-from typing import List, Callable
+import logging
+import argparse
 
-from datasets import Sequence, Value, Features, Dataset, DatasetDict
-
-from retrieval import SparseRetrieval
+import wandb
 
 from solution.args import (
     HfArgumentParser,
@@ -15,11 +13,13 @@ from solution.args import (
     ModelingArguments,
     ProjectArguments
 )
+from solution.retrieval import run_retrieval
 from solution.reader import (
     ExtractiveReader,
     GenerativeReader,
 )
 from solution.utils import (
+    set_seed,
     compute_metrics,
     post_processing_function,
     ext_prepare_features,
@@ -27,7 +27,7 @@ from solution.utils import (
 )
 
 
-def main():
+def main(command_args):
     # 가능한 arguments 들은 ./arguments.py 나 transformer package 안의 src/transformers/training_args.py 에서 확인 가능합니다.
     # --help flag 를 실행시켜서 확인할 수 도 있습니다.
     logger = logging.getLogger(__name__)
@@ -37,8 +37,7 @@ def main():
         handlers=[logging.StreamHandler(sys.stdout)],
         level=logging.INFO,
     )
-
-    command_args = get_args_parser()
+    
     parser = HfArgumentParser(
         (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
     )
@@ -75,21 +74,21 @@ def main():
 
     # Trainer 객체 설정. Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
     reader.set_trainer()
-    print(f"model is from {reader.args.model_args.model_name_or_path}")
-    print(f"data is from {reader.args.data_args.dataset_name}")
+    print(f"model is from {reader.model_args.model_name_or_path}")
+    print(f"data is from {reader.data_args.dataset_name}")
 
     # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
     # See solution.reader.postprocessing L326-336
-    do_predict = reader.args.training_args.do_predict
-    if reader.args.training_args.do_predict:
-        reader.args.training_args.do_predict = False
+    do_predict = reader.training_args.do_predict
+    if reader.training_args.do_predict:
+        reader.training_args.do_predict = False
 
     # do_train mrc model
-    if reader.args.training_args.do_train:
+    if reader.training_args.do_train:
         if reader.last_checkpoint is not None:
             checkpoint = reader.last_checkpoint
-        elif os.path.isdir(reader.args.model_args.model_name_or_path):
-            checkpoint = reader.args.model_args.model_name_or_path
+        elif os.path.isdir(reader.model_args.model_name_or_path):
+            checkpoint = reader.model_args.model_name_or_path
         else:
             checkpoint = None
 
@@ -103,7 +102,7 @@ def main():
         reader.trainer.save_metrics("train", metrics)
         reader.trainer.save_state()
 
-        output_train_file = os.path.join(reader.args.training_args.output_dir, "train_results.txt")
+        output_train_file = os.path.join(reader.training_args.output_dir, "train_results.txt")
         
         with open(output_train_file, "w") as writer:
             logger.info("***** Train results *****")
@@ -113,24 +112,25 @@ def main():
 
         # State 저장
         reader.trainer.state.save_to_json(
-            os.path.join(reader.args.training_args.output_dir, "trainer_state.json")
+            os.path.join(reader.training_args.output_dir, "trainer_state.json")
         )
 
     # Evaluation
     # train_dataset['validation']으로 성능을 평가합니다. retrieval 활용 여부에 따라
     # 1. eval_retrieval == False : MRC Model의 단독 성능 평가
     # 2. eval_retrieval == True  : MRC Model & Retrieval Model 조합의 성능 평가
-    if reader.args.training_args.do_eval:
+    
+    # See solution.reader.postprocessing L326-336
+    if reader.training_args.do_eval:
         retrieved_dataset = None
         retrieved_examples = None
-        if reader.args.data_args.eval_retrieval:
+        if reader.data_args.eval_retrieval:
             logger.info("*** Evaluate with Retrieved passage ***")
-            retrieved_examples = run_sparse_retrieval(
-                tokenize_fn=reader.tokenizer.tokenize,
+            retrieved_examples = run_retrieval(
                 datasets=reader.datasets,
-                training_args=reader.args.training_args,
-                data_args=reader.args.data_args,
-                )
+                training_args=reader.training_args,
+                data_args=reader.data_args,
+            )
             retrieved_examples = retrieved_examples["validation"]
             retrieved_dataset = reader.preprocessing_retrieved_doc(retrieved_examples)
 
@@ -142,23 +142,22 @@ def main():
         reader.trainer.save_metrics("eval", metrics)
 
     if do_predict:
-        reader.args.training_args.do_predict = True
+        reader.training_args.do_predict = True
     
     # Submission
-    if reader.args.training_args.do_predict:
+    if reader.training_args.do_predict:
         logger.info("*** Predict ***")
-        if not reader.args.data_args.eval_retrieval:
+        if not reader.data_args.eval_retrieval:
             raise ValueError('*** For submission, you must use retireval model(set --eval_retrieval True --do_predict True ***')
 
 
         retrieved_dataset = None
         retrieved_examples = None
-        retrieved_examples = run_sparse_retrieval(
-            tokenize_fn=reader.tokenizer.tokenize,
+        retrieved_examples = run_retrieval(
             datasets=reader.test_datasets,
-            training_args=reader.args.training_args,
-            data_args=reader.args.data_args,
-            )
+            training_args=reader.training_args,
+            data_args=reader.data_args,
+        )
         retrieved_examples = retrieved_examples["validation"]
         retrieved_dataset = reader.preprocessing_retrieved_doc(retrieved_examples)
 
@@ -173,61 +172,8 @@ def main():
             "No metric can be presented because there is no correct answer given. Job done!"
         )
 
-# ====================================================
-# TODO 바꿔줄 함수
-def run_sparse_retrieval(
-    tokenize_fn: Callable[[str], List[str]],
-    datasets: DatasetDict,
-    training_args: NewTrainingArguments,
-    data_args: DataArguments,
-    data_path: str = "./data/aistage-mrc/",
-    context_path: str = "wikipedia_documents.json",
-) -> DatasetDict:
-
-    # Query에 맞는 Passage들을 Retrieval 합니다.
-    retriever = SparseRetrieval(
-        tokenize_fn=tokenize_fn, data_path=data_path, context_path=context_path
-    )
-    retriever.get_sparse_embedding()
-
-    if data_args.use_faiss:
-        retriever.build_faiss(num_clusters=data_args.num_clusters)
-        df = retriever.retrieve_faiss(
-            datasets["validation"], topk=data_args.top_k_retrieval
-        )
-    else:
-        df = retriever.retrieve(datasets["validation"], topk=data_args.top_k_retrieval)
-
-    # test data 에 대해선 정답이 없으므로 id question context 로만 데이터셋이 구성됩니다.
-    if training_args.do_predict:
-        f = Features(
-            {
-                "context": Value(dtype="string", id=None),
-                "id": Value(dtype="string", id=None),
-                "question": Value(dtype="string", id=None),
-            }
-        )
-
-    # train data 에 대해선 정답이 존재하므로 id question context answer 로 데이터셋이 구성됩니다.
-    elif training_args.do_eval:
-        f = Features(
-            {
-                "answers": Sequence(
-                    feature={
-                        "text": Value(dtype="string", id=None),
-                        "answer_start": Value(dtype="int32", id=None),
-                    },
-                    length=-1,
-                    id=None,
-                ),
-                "context": Value(dtype="string", id=None),
-                "id": Value(dtype="string", id=None),
-                "question": Value(dtype="string", id=None),
-            }
-        )
-    datasets = DatasetDict({"validation": Dataset.from_pandas(df, features=f)})
-    return datasets
-
-
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', '-c', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
+    command_args = parser.parse_args()
+    main(command_args)

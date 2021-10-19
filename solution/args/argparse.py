@@ -76,6 +76,6 @@ class HfArgumentParser(ArgumentParser):
 
 def get_args_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
+    parser.add_argument('--config', '-c', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
     command_args = parser.parse_args()
     return command_args
