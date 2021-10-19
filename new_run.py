@@ -74,21 +74,21 @@ def main(command_args):
 
     # Trainer 객체 설정. Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
     reader.set_trainer()
-    print(f"model is from {reader.args.model_args.model_name_or_path}")
-    print(f"data is from {reader.args.data_args.dataset_name}")
+    print(f"model is from {reader.model_args.model_name_or_path}")
+    print(f"data is from {reader.data_args.dataset_name}")
 
     # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
     # See solution.reader.postprocessing L326-336
-    do_predict = reader.args.training_args.do_predict
-    if reader.args.training_args.do_predict:
-        reader.args.training_args.do_predict = False
+    do_predict = reader.training_args.do_predict
+    if reader.training_args.do_predict:
+        reader.training_args.do_predict = False
 
     # do_train mrc model
-    if reader.args.training_args.do_train:
+    if reader.training_args.do_train:
         if reader.last_checkpoint is not None:
             checkpoint = reader.last_checkpoint
-        elif os.path.isdir(reader.args.model_args.model_name_or_path):
-            checkpoint = reader.args.model_args.model_name_or_path
+        elif os.path.isdir(reader.model_args.model_name_or_path):
+            checkpoint = reader.model_args.model_name_or_path
         else:
             checkpoint = None
 
@@ -102,7 +102,7 @@ def main(command_args):
         reader.trainer.save_metrics("train", metrics)
         reader.trainer.save_state()
 
-        output_train_file = os.path.join(reader.args.training_args.output_dir, "train_results.txt")
+        output_train_file = os.path.join(reader.training_args.output_dir, "train_results.txt")
         
         with open(output_train_file, "w") as writer:
             logger.info("***** Train results *****")
@@ -112,7 +112,7 @@ def main(command_args):
 
         # State 저장
         reader.trainer.state.save_to_json(
-            os.path.join(reader.args.training_args.output_dir, "trainer_state.json")
+            os.path.join(reader.training_args.output_dir, "trainer_state.json")
         )
 
     # Evaluation
@@ -121,15 +121,15 @@ def main(command_args):
     # 2. eval_retrieval == True  : MRC Model & Retrieval Model 조합의 성능 평가
     
     # See solution.reader.postprocessing L326-336
-    if reader.args.training_args.do_eval:
+    if reader.training_args.do_eval:
         retrieved_dataset = None
         retrieved_examples = None
-        if reader.args.data_args.eval_retrieval:
+        if reader.data_args.eval_retrieval:
             logger.info("*** Evaluate with Retrieved passage ***")
             retrieved_examples = run_retrieval(
                 datasets=reader.datasets,
-                training_args=reader.args.training_args,
-                data_args=reader.args.data_args,
+                training_args=reader.training_args,
+                data_args=reader.data_args,
             )
             retrieved_examples = retrieved_examples["validation"]
             retrieved_dataset = reader.preprocessing_retrieved_doc(retrieved_examples)
@@ -142,12 +142,12 @@ def main(command_args):
         reader.trainer.save_metrics("eval", metrics)
 
     if do_predict:
-        reader.args.training_args.do_predict = True
+        reader.training_args.do_predict = True
     
     # Submission
-    if reader.args.training_args.do_predict:
+    if reader.training_args.do_predict:
         logger.info("*** Predict ***")
-        if not reader.args.data_args.eval_retrieval:
+        if not reader.data_args.eval_retrieval:
             raise ValueError('*** For submission, you must use retireval model(set --eval_retrieval True --do_predict True ***')
 
 
@@ -155,8 +155,8 @@ def main(command_args):
         retrieved_examples = None
         retrieved_examples = run_retrieval(
             datasets=reader.test_datasets,
-            training_args=reader.args.training_args,
-            data_args=reader.args.data_args,
+            training_args=reader.training_args,
+            data_args=reader.data_args,
         )
         retrieved_examples = retrieved_examples["validation"]
         retrieved_dataset = reader.preprocessing_retrieved_doc(retrieved_examples)

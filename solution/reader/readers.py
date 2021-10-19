@@ -34,15 +34,15 @@ class ExtractiveReader(ReaderBase):
         """ Set Trainer """
         self.trainer = QuestionAnsweringTrainer( 
                             model_init=self.model_init,
-                            args=self.args.training_args,
+                            args=self.training_args,
                             train_dataset=\
-                                self.train_dataset if self.args.training_args.do_train else None,
+                                self.train_dataset if self.training_args.do_train else None,
                             eval_dataset=\
-                                eval_dataset if self.args.training_args.do_eval \
-                                    or self.args.training_args.do_predict else None,
+                                eval_dataset if self.training_args.do_eval \
+                                    or self.training_args.do_predict else None,
                             eval_examples=\
-                                eval_samples if self.args.training_args.do_eval \
-                                    or self.args.training_args.do_predict else None,
+                                eval_samples if self.training_args.do_eval \
+                                    or self.training_args.do_predict else None,
                             tokenizer=self.tokenizer,
                             data_collator=self.data_collator,
                             post_process_function=self.post_process_function,
@@ -93,15 +93,15 @@ class GenerativeReader(ReaderBase):
         """ Set Trainer """
         self.trainer = QuestionAnsweringSeq2SeqTrainer( 
                             model_init=self.model_init,
-                            args=self.args.training_args,
+                            args=self.training_args,
                             train_dataset=\
-                                self.train_dataset if self.args.training_args.do_train else None,
+                                self.train_dataset if self.training_args.do_train else None,
                             eval_dataset=\
-                                eval_dataset if self.args.training_args.do_eval \
-                                    or self.args.training_args.do_predict else None,
+                                eval_dataset if self.training_args.do_eval \
+                                    or self.training_args.do_predict else None,
                             eval_examples=\
-                                eval_samples if self.args.training_args.do_eval \
-                                    or self.args.training_args.do_predict else None,
+                                eval_samples if self.training_args.do_eval \
+                                    or self.training_args.do_predict else None,
                             tokenizer=self.tokenizer,
                             data_collator=self.data_collator,
                             post_process_function=self.post_processing_function,
