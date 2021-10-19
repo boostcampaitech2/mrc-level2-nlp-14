@@ -2,13 +2,14 @@ from typing import List, Callable
 from datasets import Sequence, Value, Features, Dataset, DatasetDict
 
 from solution.args import NewTrainingArguments, DataArguments
-from solution.retrieval.sparse import TfidfRetrieval
+from solution.retrieval.sparse import TfidfRetrieval, OkapiBM25Retrieval
 from solution.retrieval.dense import *
 from solution.retrieval.elastic_engine import ESRetrieval
 
 
 SPARSE_RETRIEVAL = {
     "tfidf": TfidfRetrieval,
+    "okapi_bm25": OkapiBM25Retrieval,
 }
 DENSE_RETRIEVAL = {
     "dpr": None,
@@ -27,7 +28,7 @@ def run_retrieval(
     data_args: DataArguments,
 ):
     retrieval_mode = RETRIEVAL_MODE[data_args.retrieval_mode]
-    retriever = retrieval_mode[data_args.retrieval_name]
+    retriever = retrieval_mode[data_args.retrieval_name](data_args)
     df = retriever.retrieve(datasets["validation"],
                             topk=data_args.top_k_retrieval)
     if training_args.do_predict:

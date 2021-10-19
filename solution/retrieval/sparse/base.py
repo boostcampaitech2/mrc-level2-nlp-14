@@ -98,8 +98,9 @@ class SparseRetrieval(RetrievalBase):
         return query_emb
     
     def get_passage_embedding(self):
-        pickle_name = f"sparse_embedding.bin"
-        vectorizer_path = f"tfidv.bin"
+        cls_name = self.__class__.__name__
+        pickle_name = f"{cls_name}_embedding.bin"
+        vectorizer_path = f"{cls_name}_vectorizer.bin"
         emb_path = os.path.join(self.dataset_path, pickle_name)
         vectorizer_path = os.path.join(self.dataset_path, vectorizer_path)
         
