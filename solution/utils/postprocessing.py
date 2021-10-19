@@ -21,6 +21,8 @@ import json
 import logging
 import os
 from typing import Optional, Tuple
+import nltk
+nltk.download('punkt')
 
 import numpy as np
 from tqdm.auto import tqdm
@@ -375,3 +377,20 @@ def post_processing_function(examples, features, predictions, training_args):
         return EvalPrediction(
             predictions=formatted_predictions, label_ids=references
         )
+
+
+def gen_postprocessing_function(preds, labels):
+  """
+  postprocess는 nltk를 이용합니다.
+  Huggingface의 TemplateProcessing을 사용하여
+  정규표현식 기반으로 postprocess를 진행할 수 있지만
+  해당 미션에서는 nltk를 이용하여 간단한 후처리를 진행합니다
+  """
+
+  preds = [pred.strip() for pred in preds]
+  labels = [label.strip() for label in labels]
+    
+  preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
+  labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
+
+  return preds, labels

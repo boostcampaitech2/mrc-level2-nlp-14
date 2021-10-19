@@ -115,12 +115,18 @@ def ext_prepare_train_features(examples, tokenizer):
 
 def gen_prepare_train_features(examples, tokenizer):
     """Function for preprocessing training features"""
+    command_args = get_args_parser()
+    parser = HfArgumentParser(
+        (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
+    )
+    data_args, _, _, _ = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
+
     inputs = [f"question: {q}  context: {c} </s>" for q, c in zip(examples["question"], examples["context"])]
     targets = [f'{a["text"][0]} </s>' for a in examples['answers']]
     model_inputs = tokenizer(
         inputs,
-        max_length=max_source_length,
-        padding=padding,
+        max_length=data_args.max_seq_length,
+        padding=data_args.pad_to_max_length,
         truncation=True
     )
 
@@ -128,7 +134,7 @@ def gen_prepare_train_features(examples, tokenizer):
     with tokenizer.as_target_tokenizer():
         labels = tokenizer(
             targets,
-            max_length=max_target_length,
+            max_length=data_args.max_answer_length,
             padding=padding,
             truncation=True
         )

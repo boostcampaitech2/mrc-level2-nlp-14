@@ -41,8 +41,8 @@ NewTrainingArguments:
 
 # Model Arguments
 ModelingArguments:
-  model_name_or_path: klue/bert-base
-  architectures: BertForQuestionAnswering
+  model_name_or_path: google/mt5-small
+  architectures: MT5ForConditionalGeneration
   method: ext
   config_name: null
   tokenizer_name: null
