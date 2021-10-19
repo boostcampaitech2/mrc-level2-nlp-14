@@ -17,18 +17,14 @@
 import os
 import abc
 
-import torch.nn as nn
 from dataclasses import asdict, dataclass
 
 from datasets import load_from_disk, Dataset
-from transformers import AutoConfig, AutoTokenizer, AutoModel
+from transformers import AutoTokenizer
 from functools import partial
 
 from transformers import (
-    AutoConfig,
     AutoTokenizer,
-    AutoModel,
-    AutoModelForSeq2SeqLM,
     DataCollatorWithPadding,
     set_seed,
 )
@@ -46,7 +42,6 @@ from solution.utils import (
 from solution.reader.extractive_models import EXT_MODEL_INIT_FUNC
 from solution.reader.generative_models import GEN_MODEL_INIT_FUNC
 
-import solution
 
 class ReaderBase():
     """ Base class for Reader module """
@@ -154,6 +149,8 @@ class ReaderBase():
         elif self.args.model_args.method == "gen":
             _model_init = GEN_MODEL_INIT_FUNC[self.args.model_args.model_init]
         
+        #get함수로 바꾸고 none이면 error raise
+
         self.model_init = partial(_model_init,
                             model_args=self.args.model_args,
                             )

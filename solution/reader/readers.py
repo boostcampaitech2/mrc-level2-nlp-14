@@ -1,5 +1,3 @@
-import argparse
-
 from datasets import Dataset
 
 from solution.trainers import QuestionAnsweringTrainer, QuestionAnsweringSeq2SeqTrainer

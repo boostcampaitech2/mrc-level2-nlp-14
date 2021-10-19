@@ -55,13 +55,13 @@ def save_pred_json(
 
     prediction_file = os.path.join(
         output_dir,
-        "predictions.json" if prefix is None else f"predictions_{prefix}".json,
+        "predictions.json" if prefix is None else f"predictions_{prefix}.json",
     )
     nbest_file = os.path.join(
         output_dir,
         "nbest_predictions.json"
         if prefix is None
-        else f"nbest_predictions_{prefix}".json,
+        else f"nbest_predictions_{prefix}.json",
     )
 
     logger.info(f"Saving predictions to {prediction_file}.")
