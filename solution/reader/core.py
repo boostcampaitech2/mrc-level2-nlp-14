@@ -151,7 +151,7 @@ class ReaderBase():
             _model_init = GEN_MODEL_INIT_FUNC.get(self.args.model_args.model_init)
 
         if _model_init is None:
-            raise ValueError("Check whether architecture is properly set or not")
+            raise ValueError("Check whether model_init is properly set or not")
 
         self.model_init = partial(_model_init,
                             model_args=self.args.model_args,
