@@ -14,12 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
-import sys
 import abc
 
-import argparse
 import torch.nn as nn
 from dataclasses import asdict, dataclass
 
@@ -28,16 +25,18 @@ from transformers import AutoConfig, AutoTokenizer, AutoModel
 from functools import partial
 
 from transformers import (
+    AutoConfig,
+    AutoTokenizer,
+    AutoModel,
+    AutoModelForSeq2SeqLM,
     DataCollatorWithPadding,
     set_seed,
 )
 
 from solution.args import (
-    HfArgumentParser,
     DataArguments,
     NewTrainingArguments,
     ModelingArguments,
-    ProjectArguments,
 )
 
 from solution.utils import (
