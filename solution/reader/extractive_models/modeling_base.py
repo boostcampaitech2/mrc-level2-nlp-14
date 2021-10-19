@@ -12,7 +12,7 @@ class ExtractiveReaderModel(ReaderModelBase):
     def __init__(self, model_args):
         super().__init__(model_args)
         # If you want to change head layer, Overide it.
-        self.qa_outputs = None if self.input_size is None else nn.Linear(self.input_size, 2)
+        self.qa_outputs = None if self.config.hidden_size is None else nn.Linear(self.config.hidden_size, 2)
         # backbone model's pooler output index. 2 for BERT type, 1 for the others 
         self.pooling_idx = 2 if 'bert' in self.backbone.__class__.__name__.lower() else 1
 
@@ -82,8 +82,7 @@ class ExtractiveReaderMLPModel(ExtractiveReaderModel):
     """ Deeper MLP Head """
     def __init__(self, model_args):
         super().__init__(model_args)
-        input_size = self.input_size
-        self.qa_outputs = None if input_size is None else nn.Sequential(
-                        nn.Linear(input_size, input_size * 4, bias=False),
-                        nn.Linear(input_size * 4, input_size, bias=False),
-                        nn.Linear(input_size, 2))
+        self.qa_outputs = nn.Sequential(
+                        nn.Linear(self.config.hidden_size, self.config.hidden_size * 4, bias=False),
+                        nn.Linear(self.config.hidden_size * 4, self.config.hidden_size, bias=False),
+                        nn.Linear(self.config.hidden_size, 2))

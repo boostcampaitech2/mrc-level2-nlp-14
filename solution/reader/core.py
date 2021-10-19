@@ -14,29 +14,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
 import os
-import sys
 import abc
 
-import argparse
 import torch.nn as nn
 from dataclasses import asdict, dataclass
 
 from datasets import load_from_disk, Dataset
-from transformers import AutoConfig, AutoTokenizer, AutoModel
 
 from transformers import (
+    AutoConfig,
+    AutoTokenizer,
+    AutoModel,
+    AutoModelForSeq2SeqLM,
     DataCollatorWithPadding,
     set_seed,
 )
 
 from solution.args import (
-    HfArgumentParser,
     DataArguments,
     NewTrainingArguments,
     ModelingArguments,
-    ProjectArguments,
 )
 
 from solution.utils import (
@@ -260,10 +258,15 @@ class ReaderModelBase(nn.Module):
         )
         for key, value in asdict(model_args).items():
             setattr(self.config, key, value)
-        self.backbone = AutoModel.from_pretrained(pretrained_model_name_or_path=model_args.model_name_or_path,
+
+        if "ForConditionalGeneration" in self.config.architectures:
+            self.backbone = AutoModelForSeq2SeqLM.from_pretrained(pretrained_model_name_or_path=model_args.model_name_or_path,
             from_tf=bool(".ckpt" in model_args.model_name_or_path),
             config=self.config)
-        self.input_size = self.config.hidden_size
+        else:
+            self.backbone = AutoModel.from_pretrained(pretrained_model_name_or_path=model_args.model_name_or_path,
+                from_tf=bool(".ckpt" in model_args.model_name_or_path),
+                config=self.config)
 
     @abc.abstractmethod
     def forward(self):
@@ -271,12 +274,6 @@ class ReaderModelBase(nn.Module):
         pass
 
     @abc.abstractmethod
-    def set_trainer(self, retrieved_dataset:Dataset=None):
-        """ Set up the Trainer """
-        pass
-
-    @abc.abstractmethod
     def predict(self, *args, **kwargs):
         """ Call predict """
         pass
-    
