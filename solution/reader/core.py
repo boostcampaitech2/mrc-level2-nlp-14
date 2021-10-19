@@ -20,6 +20,7 @@ import abc
 from dataclasses import asdict, dataclass
 
 from datasets import load_from_disk, Dataset
+from numpy.core.numeric import NaN
 from transformers import AutoTokenizer
 from functools import partial
 
@@ -145,11 +146,12 @@ class ReaderBase():
         )
         
         if self.args.model_args.method == "ext":
-            _model_init = EXT_MODEL_INIT_FUNC[self.args.model_args.model_init]
+            _model_init = EXT_MODEL_INIT_FUNC.get(self.args.model_args.model_init)
         elif self.args.model_args.method == "gen":
-            _model_init = GEN_MODEL_INIT_FUNC[self.args.model_args.model_init]
-        
-        #get함수로 바꾸고 none이면 error raise
+            _model_init = GEN_MODEL_INIT_FUNC.get(self.args.model_args.model_init)
+
+        if _model_init is None:
+            raise ValueError("Check whether architecture is properly set or not")
 
         self.model_init = partial(_model_init,
                             model_args=self.args.model_args,
