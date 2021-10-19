@@ -1,13 +1,9 @@
 import logging
 import os
 import sys
-from functools import partial
 from typing import List, Callable
 
-import wandb
 from datasets import Sequence, Value, Features, Dataset, DatasetDict
-
-from transformers import set_seed
 
 from retrieval import SparseRetrieval
 
@@ -15,20 +11,19 @@ from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
-    TrainingArguments,
     NewTrainingArguments,
     ModelingArguments,
     ProjectArguments
 )
 from solution.reader import (
-    post_processing_function,
     ExtractiveReader,
     GenerativeReader,
-    ext_prepare_features,
-    gen_prepare_features
 )
 from solution.utils import (
     compute_metrics,
+    post_processing_function,
+    ext_prepare_features,
+    gen_prepare_features
 )
 
 
@@ -55,13 +50,13 @@ def main():
 
     # Reader 모델 통합 관리 객체. 생성시에 데이터셋 및 모델 세팅 수행됨
     if model_args.method == 'ext':
-        reader = ExtractiveReader(command_args=command_args,
+        reader = ExtractiveReader(data_args=data_args, training_args=training_args, model_args=model_args,
                                     compute_metrics=compute_metrics,
                                     pre_process_function=ext_prepare_features,
                                     post_process_function=post_processing_function,
                                     logger=logger)
     elif model_args.method == 'gen':
-        reader = GenerativeReader(command_args=command_args,
+        reader = GenerativeReader(data_args=data_args, training_args=training_args, model_args=model_args,
                                     compute_metrics=compute_metrics,
                                     pre_process_function=gen_prepare_features,
                                     post_process_function=post_processing_function,
@@ -80,9 +75,14 @@ def main():
 
     # Trainer 객체 설정. Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
     reader.set_trainer()
-    print(reader.model)
     print(f"model is from {reader.args.model_args.model_name_or_path}")
     print(f"data is from {reader.args.data_args.dataset_name}")
+
+    # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
+    # See solution.reader.postprocessing L326-336
+    do_predict = reader.args.training_args.do_predict
+    if reader.args.training_args.do_predict:
+        reader.args.training_args.do_predict = False
 
     # do_train mrc model
     if reader.args.training_args.do_train:
@@ -116,19 +116,11 @@ def main():
             os.path.join(reader.args.training_args.output_dir, "trainer_state.json")
         )
 
-
-        
     # Evaluation
     # train_dataset['validation']으로 성능을 평가합니다. retrieval 활용 여부에 따라
     # 1. eval_retrieval == False : MRC Model의 단독 성능 평가
     # 2. eval_retrieval == True  : MRC Model & Retrieval Model 조합의 성능 평가
-    # See solution.reader.postprocessing L326-336
     if reader.args.training_args.do_eval:
-        # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
-        do_predict = reader.args.training_args.do_predict
-        if reader.args.training_args.do_predict:
-            reader.args.training_args.do_predict = False
-
         retrieved_dataset = None
         retrieved_examples = None
         if reader.args.data_args.eval_retrieval:
@@ -149,8 +141,8 @@ def main():
         reader.trainer.log_metrics("eval", metrics)
         reader.trainer.save_metrics("eval", metrics)
 
-        if do_predict:
-            reader.args.training_args.do_predict = True
+    if do_predict:
+        reader.args.training_args.do_predict = True
     
     # Submission
     if reader.args.training_args.do_predict:
@@ -188,7 +180,7 @@ def run_sparse_retrieval(
     datasets: DatasetDict,
     training_args: NewTrainingArguments,
     data_args: DataArguments,
-    data_path: str = "../data",
+    data_path: str = "./data/aistage-mrc/",
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
 

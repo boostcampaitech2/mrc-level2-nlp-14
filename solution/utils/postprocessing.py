@@ -35,7 +35,7 @@ from solution.args import (
     ProjectArguments,
 )
 from solution.reader.constant import (
-    answer_column_name,
+    ANSWER_COLUMN_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,13 +55,13 @@ def save_pred_json(
 
     prediction_file = os.path.join(
         output_dir,
-        "predictions.json" if prefix is None else f"predictions_{prefix}".json,
+        "predictions.json" if prefix is None else f"predictions_{prefix}.json",
     )
     nbest_file = os.path.join(
         output_dir,
         "nbest_predictions.json"
         if prefix is None
-        else f"nbest_predictions_{prefix}".json,
+        else f"nbest_predictions_{prefix}.json",
     )
 
     logger.info(f"Saving predictions to {prediction_file}.")
@@ -369,7 +369,7 @@ def post_processing_function(examples, features, predictions, training_args):
 
     elif training_args.do_eval:
         references = [
-            {"id": ex["id"], "answers": ex[answer_column_name]}
+            {"id": ex["id"], "answers": ex[ANSWER_COLUMN_NAME]}
             for ex in examples
         ]
         return EvalPrediction(
