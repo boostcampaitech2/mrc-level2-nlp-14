@@ -57,9 +57,11 @@ class PandasMixin:
         """
         total = []
         
-        for idx, example in enumerate(
-            tqdm(query_or_dataset, desc="Retrieval: ")
-        ):
+        for idx, example in enumerate(query_or_dataset):
+            if doc_contexts:
+                contexts = doc_contexts[idx]
+            else:
+                contexts = [self.contexts[pid] for pid in doc_indices[idx]]
             tmp = {
                 # Query와 해당 id를 반환합니다.
                 "question": example["question"],
@@ -67,10 +69,7 @@ class PandasMixin:
                 # Retrieve한 Passage의 id, score, context를 반환합니다.
                 "context_id": doc_indices[idx],
                 "context_score": doc_scores[idx],
-                "context": " ".join(
-                    [self.contexts[pid] for pid in doc_indices[idx]]
-                    if doc_contexts is None else doc_contexts
-                )
+                "context": " ".join(contexts)
             }
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환

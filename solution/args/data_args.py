@@ -96,8 +96,8 @@ class DataArguments:
         default=50000,
         metadata={"help": "Max features used for TF-IDF Vectorizer."}
     )
-    sp_ngram_range: Tuple[int, int] = lambda_field(
-        default=(1,2),
+    sp_ngram_range: List[int] = lambda_field(
+        default=[1,2],
         metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
     )
     retrieval_tokenizer_name: str = field(

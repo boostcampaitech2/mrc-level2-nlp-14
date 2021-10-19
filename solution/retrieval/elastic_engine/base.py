@@ -29,9 +29,10 @@ class ElasticSearchBase(SearchBase):
         index_config = self.build_index_config()
         self.engine.indices.create(index=index_name, body=index_config, ignore=400)
         document_texts = [
-            {"_index": self.index_name, 
+            {"_id": i,
+             "_index": self.index_name, 
              "_source": {"document_text" : doc}}
-            for doc in self.contexts
+            for i, doc in enumerate(self.contexts)
         ]
         helpers.bulk(self.engine, document_texts)
         with open("configs/es_index_config.json", "w", encoding="utf-8") as f:
@@ -198,11 +199,7 @@ class ElasticSearchBase(SearchBase):
                 body.append({"index": self.index_name})
             else:
                 body.append(self.make_query(query[i//2], topk))
-                
-        body = [
-            self.make_query(query[i//2], topk) if i % 2 else {"index": self.index_name}
-            for i in range(len(query)*2)
-        ]
+
         response = self.engine.msearch(body=body)["responses"]
         
         doc_scores = [[hit["_score"] for hit in res["hits"]["hits"]] for res in response]
