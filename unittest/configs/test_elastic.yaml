@@ -15,8 +15,8 @@ DataArguments:
   retrieval_mode: elastic_engine
   retrieval_name: elastic_search
   sp_max_features: 50000
-  sp_ngram_range: (1,2)
-  tokenizer_name: klue/bert-base
+  sp_ngram_range: [1,2]
+  tokenizer_name: mecab
   index_name: wiki-index
   stopword_path: user_dic/my_stop_dic.txt
   decompound_mode: mixed
@@ -38,7 +38,7 @@ DataArguments:
   ib_lambda: df
   lmd_mu: 2000
   lmjm_lambda: 0.1
-  rebuilt_index: False
+  rebuilt_index: True
   
 ModelingArguments:
   model_name_or_path: bert-base-multilingual-cased
