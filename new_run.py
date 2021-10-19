@@ -75,7 +75,6 @@ def main():
 
     # Trainer 객체 설정. Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
     reader.set_trainer()
-    print(reader.model)
     print(f"model is from {reader.args.model_args.model_name_or_path}")
     print(f"data is from {reader.args.data_args.dataset_name}")
 
@@ -181,7 +180,7 @@ def run_sparse_retrieval(
     datasets: DatasetDict,
     training_args: NewTrainingArguments,
     data_args: DataArguments,
-    data_path: str = "../data",
+    data_path: str = "./data/aistage-mrc/",
     context_path: str = "wikipedia_documents.json",
 ) -> DatasetDict:
 

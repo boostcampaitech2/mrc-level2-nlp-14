@@ -35,7 +35,7 @@ class ExtractiveReader(ReaderBase):
         
         """ Set Trainer """
         self.trainer = QuestionAnsweringTrainer( 
-                            model=self.model,
+                            model_init=self.model_init,
                             args=self.args.training_args,
                             train_dataset=\
                                 self.train_dataset if self.args.training_args.do_train else None,
@@ -94,7 +94,7 @@ class GenerativeReader(ReaderBase):
 
         """ Set Trainer """
         self.trainer = QuestionAnsweringSeq2SeqTrainer( 
-                            model=self.model,
+                            model_init=self.model_init,
                             args=self.args.training_args,
                             train_dataset=\
                                 self.train_dataset if self.args.training_args.do_train else None,

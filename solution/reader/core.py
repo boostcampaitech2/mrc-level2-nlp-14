@@ -25,6 +25,7 @@ from dataclasses import asdict, dataclass
 
 from datasets import load_from_disk, Dataset
 from transformers import AutoConfig, AutoTokenizer, AutoModel
+from functools import partial
 
 from transformers import (
     DataCollatorWithPadding,
@@ -42,6 +43,9 @@ from solution.args import (
 from solution.utils import (
     check_no_error,
 )
+
+from solution.reader.extractive_models import EXT_MODEL_INIT_FUNC
+from solution.reader.generative_models import GEN_MODEL_INIT_FUNC
 
 import solution
 
@@ -100,8 +104,8 @@ class ReaderBase():
         pass
 
     @abc.abstractmethod
-    def model(self):
-        """ Get model (fix name convention) """
+    def model_init(self):
+        """ Get model init function (fix name convention) """
         pass
 
     @abc.abstractmethod
@@ -124,6 +128,7 @@ class ReaderBase():
         """ Get post_process_function (fix name convention) """
         pass
 
+    
 
     def _set_initial_setup(self):
         """ Initial Set up attributes """
@@ -144,11 +149,17 @@ class ReaderBase():
             # rust version이 비교적 속도가 빠릅니다.
             use_fast=True,
         )
+        
         if self.args.model_args.method == "ext":
-            arch_class = getattr(solution.reader.extractive_models, self.args.model_args.architectures)
+            _model_init = EXT_MODEL_INIT_FUNC[self.args.model_args.model_init]
         elif self.args.model_args.method == "gen":
-            arch_class = getattr(solution.reader.generative_models, self.args.model_args.architectures)
-        self.model = arch_class(self.args.model_args)
+            _model_init = GEN_MODEL_INIT_FUNC[self.args.model_args.model_init]
+        
+        self.model_init = partial(_model_init,
+                            model_args=self.args.model_args,
+                            )
+
+
 
         # Data collator
         # flag가 True이면 이미 max length로 padding된 상태입니다.
@@ -162,7 +173,7 @@ class ReaderBase():
             type(self.args.model_args),
             type(self.datasets),
             type(self.tokenizer),
-            type(self.model),
+            type(self.model_init),
         )
         self.logger.info("*** Initial set-up of the Reader Model Completed ***")
 
@@ -246,37 +257,3 @@ class ReaderBase():
     def predict(self, *args, **kwargs):
         """ Call predict method of self.trainer """
         pass
-
-
-class ReaderModelBase(nn.Module):
-    """ Base class for Reader Model module """
-
-    def __init__(self, model_args):
-        super().__init__()
-        self.config = AutoConfig.from_pretrained(
-            model_args.config_name
-            if model_args.config_name
-            else model_args.model_name_or_path,
-        )
-        for key, value in asdict(model_args).items():
-            setattr(self.config, key, value)
-        self.backbone = AutoModel.from_pretrained(pretrained_model_name_or_path=model_args.model_name_or_path,
-            from_tf=bool(".ckpt" in model_args.model_name_or_path),
-            config=self.config)
-        self.input_size = self.config.hidden_size
-
-    @abc.abstractmethod
-    def forward(self):
-        """ Call forward (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def set_trainer(self, retrieved_dataset:Dataset=None):
-        """ Set up the Trainer """
-        pass
-
-    @abc.abstractmethod
-    def predict(self, *args, **kwargs):
-        """ Call predict """
-        pass
-    
