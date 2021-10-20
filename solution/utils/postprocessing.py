@@ -379,18 +379,44 @@ def post_processing_function(examples, features, predictions, training_args):
         )
 
 
-def gen_postprocessing_function(preds, labels):
-  """
-  postprocess는 nltk를 이용합니다.
-  Huggingface의 TemplateProcessing을 사용하여
-  정규표현식 기반으로 postprocess를 진행할 수 있지만
-  해당 미션에서는 nltk를 이용하여 간단한 후처리를 진행합니다
-  """
-
-  preds = [pred.strip() for pred in preds]
-  labels = [label.strip() for label in labels]
+def gen_postprocessing_function(examples, predictions, training_args, tokenizer):
+    """
+    postprocess는 nltk를 이용합니다.
+    Huggingface의 TemplateProcessing을 사용하여
+    정규표현식 기반으로 postprocess를 진행할 수 있지만
+    해당 미션에서는 nltk를 이용하여 간단한 후처리를 진행합니다
+    """
+    if isinstance(predictions, tuple):
+        predictions = predictions[0]
     
-  preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in preds]
-  labels = ["\n".join(nltk.sent_tokenize(label)) for label in labels]
+    # 후처리
+    decoded_preds = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    decoded_preds = [pred.strip() for pred in decoded_preds]
+    decoded_preds = ["\n".join(nltk.sent_tokenize(pred)) for pred in decoded_preds]
 
-  return preds, labels
+    formatted_predictions = [
+        {"id": ex["id"], "prediction_text": decoded_preds[i]} for i, ex in enumerate(examples)
+    ]
+
+    # 저장
+    output_dir = training_args.output_dir
+    assert os.path.isdir(output_dir), f"{output_dir} is not a directory."
+    prediction_file = os.path.join(output_dir, "predictions.json")
+    logger.info(f"Saving predictions to {prediction_file}.")
+    with open(prediction_file, "w", encoding="utf-8") as writer:
+        writer.write(
+            json.dumps(formatted_predictions, indent=4, ensure_ascii=False) + "\n"
+        )
+    
+    # 결과 리턴
+    if training_args.do_predict:
+        return formatted_predictions
+
+    elif training_args.do_eval:
+        references = [
+            {"id": ex["id"], "answers": ex[ANSWER_COLUMN_NAME]}
+            for ex in examples
+        ]
+        return EvalPrediction(
+            predictions=formatted_predictions, label_ids=references
+        )

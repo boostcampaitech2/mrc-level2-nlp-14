@@ -135,7 +135,7 @@ def gen_prepare_train_features(examples, tokenizer):
         labels = tokenizer(
             targets,
             max_length=data_args.max_answer_length,
-            padding=padding,
+            padding=data_args.pad_to_max_length,
             truncation=True
         )
 
