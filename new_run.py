@@ -22,6 +22,7 @@ from solution.utils import (
     set_seed,
     compute_metrics,
     post_processing_function,
+    gen_postprocessing_function,
     ext_prepare_features,
     gen_prepare_features
 )
@@ -58,7 +59,7 @@ def main(command_args):
         reader = GenerativeReader(data_args=data_args, training_args=training_args, model_args=model_args,
                                     compute_metrics=compute_metrics,
                                     pre_process_function=gen_prepare_features,
-                                    post_process_function=post_processing_function,
+                                    post_process_function=gen_postprocessing_function,
                                     logger=logger)
     else:
         raise ValueError("Check whether model_args.method is 'ext or 'gen'")

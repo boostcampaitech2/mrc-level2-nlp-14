@@ -73,6 +73,7 @@ class GenerativeReader(ReaderBase):
                  post_process_function=post_processing_function,
                  logger=None,):
         super(GenerativeReader, self).__init__(data_args, training_args, model_args)
+        self.logger = logger
         self._set_initial_setup()
         self.pre_process_function = pre_process_function
         self._set_preprocessing()
@@ -104,8 +105,8 @@ class GenerativeReader(ReaderBase):
                                     or self.training_args.do_predict else None,
                             tokenizer=self.tokenizer,
                             data_collator=self.data_collator,
-                            post_process_function=self.post_processing_function,
-                            compute_metrics=self.compute_metric,
+                            post_process_function=self.post_process_function,
+                            compute_metrics=self.compute_metrics,
                             )
 
         self.logger.info("*** Set up the Trainer ***")

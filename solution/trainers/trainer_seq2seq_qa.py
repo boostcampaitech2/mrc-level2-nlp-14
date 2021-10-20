@@ -5,6 +5,7 @@ from typing import Optional, List, Dict, Callable
 from transformers import (
     is_datasets_available, 
     is_torch_tpu_available,
+    Seq2SeqTrainer,
 )
 from transformers.trainer_utils import (
     PredictionOutput, 
@@ -24,7 +25,7 @@ if is_torch_tpu_available():
     import torch_xla.debug.metrics as met
 
 # TODO Implement this for Generative Model
-class QuestionAnsweringSeq2SeqTrainer(BaseTrainer):
+class QuestionAnsweringSeq2SeqTrainer(Seq2SeqTrainer):
     
     def __init__(
         self, 
@@ -44,7 +45,11 @@ class QuestionAnsweringSeq2SeqTrainer(BaseTrainer):
         eval_examples: Optional[datasets.Dataset] = None,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "eval",
+        max_length: Optional[int] = None,
+        num_beams: Optional[int] = None,
     ) -> Dict[str, float]:
+        self._max_length = max_length if max_length is not None else self.args.generation_max_length
+        self._num_beams = num_beams if num_beams is not None else self.args.generation_num_beams
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()
         eval_dataset = self.eval_dataset if eval_dataset is None else eval_dataset
@@ -75,7 +80,10 @@ class QuestionAnsweringSeq2SeqTrainer(BaseTrainer):
 
         if self.post_process_function is not None and self.compute_metrics is not None:
             eval_preds = self.post_process_function(
-                eval_examples, eval_dataset, output.predictions, self.args
+                examples=eval_examples,
+                predictions=output.predictions,
+                training_args=self.args,
+                tokenizer=self.tokenizer,
             )
             metrics = self.compute_metrics(eval_preds)
             
@@ -118,7 +126,11 @@ class QuestionAnsweringSeq2SeqTrainer(BaseTrainer):
         test_examples: datasets.Dataset, 
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "test",
+        max_length: Optional[int] = None,
+        num_beams: Optional[int] = None,
     ) -> PredictionOutput:
+        self._max_length = max_length if max_length is not None else self.args.generation_max_length
+        self._num_beams = num_beams if num_beams is not None else self.args.generation_num_beams
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()
 
@@ -150,7 +162,10 @@ class QuestionAnsweringSeq2SeqTrainer(BaseTrainer):
             )
 
         predictions = self.post_process_function(
-            test_examples, test_dataset, output.predictions, self.args
+            examples=test_examples, 
+            predictions=output.predictions, 
+            training_args=self.args,
+            tokenizer=self.tokenizer,
         )
         
         # self._memory_tracker.stop_and_update_metrics(output.metrics)

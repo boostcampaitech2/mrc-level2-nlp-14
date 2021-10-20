@@ -27,6 +27,7 @@ from functools import partial
 from transformers import (
     AutoTokenizer,
     DataCollatorWithPadding,
+    DataCollatorForSeq2Seq,
     set_seed,
 )
 
@@ -141,8 +142,15 @@ class ReaderBase():
         
         if self.model_args.method == "ext":
             _model_init = EXT_MODEL_INIT_FUNC.get(self.model_args.model_init)
+            self.data_collator = DataCollatorWithPadding(
+                self.tokenizer, pad_to_multiple_of=8 if self.training_args.fp16 else None
+            )
         elif self.model_args.method == "gen":
             _model_init = GEN_MODEL_INIT_FUNC.get(self.model_args.model_init)
+            label_pad_token_id = self.tokenizer.pad_token_id
+            self.data_collator = DataCollatorForSeq2Seq(
+                self.tokenizer, label_pad_token_id=label_pad_token_id, pad_to_multiple_of=8 if self.training_args.fp16 else None
+            )
 
         if _model_init is None:
             raise ValueError("Check whether model_init is properly set or not")
@@ -150,15 +158,6 @@ class ReaderBase():
         self.model_init = partial(_model_init,
                             model_args=self.model_args,
                             )
-
-
-
-        # Data collator
-        # flag가 True이면 이미 max length로 padding된 상태입니다.
-        # 그렇지 않다면 data collator에서 padding을 진행해야합니다.
-        self.data_collator = DataCollatorWithPadding(
-            self.tokenizer, pad_to_multiple_of=8 if self.training_args.fp16 else None
-        )
 
         self.logger.info(
             type(self.training_args),

@@ -15,7 +15,7 @@ mod = sys.modules[__name__]
 
 
 # Get model
-def gen_model_init(model_args, task_infos, tokenizer):
+def gen_model_init(model_args):
     """ Initialization function for basic models """
     config = AutoConfig.from_pretrained(
                 model_args.config_name
