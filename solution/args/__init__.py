@@ -1,4 +1,4 @@
-from solution.args.argparse import HfArgumentParser, get_args_parser
+from solution.args.argparse import HfArgumentParser
 
 from solution.args.data_args import DataArguments
 from solution.args.project_args import ProjectArguments

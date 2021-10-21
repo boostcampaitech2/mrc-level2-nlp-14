@@ -10,6 +10,9 @@ best_model/
 models/
 outputs/
 data/
+*.ipynb
+*.arrow
+*.yaml
 
 ### Python ###
 ### DO NOT CHANGE!!

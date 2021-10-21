@@ -72,10 +72,3 @@ class HfArgumentParser(ArgumentParser):
     def new_method(self, data, keys, arg_name):
         inputs = {k: v for k, v in data[arg_name].items() if k in keys}
         return inputs
-
-
-def get_args_parser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
-    command_args = parser.parse_args()
-    return command_args
