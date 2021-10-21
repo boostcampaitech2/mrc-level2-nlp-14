@@ -1,10 +1,17 @@
 from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 
+from solution.args.base import DataArguments
 from solution.args.argparse import lambda_field
 
+"""
+DATA ARGS의 항목이 너무 많아서 지저분하다.
+이를 세분화해서 어떤 PARAMETER를 건드리면 되는지 일러줘야 한다.
+"""
+
+
 @dataclass
-class DataArguments:
+class DataPathArguments(DataArguments):
     """ Arguments related to data. """
     dataset_name: str = field(
         default="./data/aistage-mrc/train_dataset", 
@@ -26,6 +33,10 @@ class DataArguments:
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
+
+    
+@dataclass
+class TokenizerArguments(DataPathArguments):
     max_seq_length: int = field(
         default=384,
         metadata={
@@ -54,13 +65,25 @@ class DataArguments:
             "and end predictions are not conditioned on one another."
         },
     )
-    eval_retrieval: bool = field(
-        default=True,
-        metadata={"help": "Whether to run passage retrieval using sparse embedding."},
+   
+    
+@dataclass
+class RetrievalArguments(TokenizerArguments):
+    rebuilt_index: bool = field(
+        default=False,
+        metadata={"help": ""}
     )
-    num_clusters: int = field(
-        default=64,
-        metadata={"help": "Define how many clusters to use for faiss."}
+    retrieval_tokenizer_name: str = field(
+        default="mecab",
+        metadata={"help": ""}
+    )
+    sp_max_features: int = field(
+        default=50000,
+        metadata={"help": "Max features used for TF-IDF Vectorizer."}
+    )
+    sp_ngram_range: List[int] = lambda_field(
+        default=[1,2],
+        metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
     )
     top_k_retrieval: int = field(
         default=1,
@@ -80,8 +103,20 @@ class DataArguments:
         default="tfidf",
         metadata={"help": ""}
     )
+    eval_retrieval: bool = field(
+        default=True,
+        metadata={"help": "Whether to run passage retrieval using sparse embedding."},
+    )
+    num_clusters: int = field(
+        default=64,
+        metadata={"help": "Define how many clusters to use for faiss."}
+    )
+
+
+@dataclass
+class ElasticSearchArguments(RetrievalArguments):
     index_name: bool = field(
-        default="wiki",
+        default="wiki-index",
         metadata={"help": ""}
     )
     stopword_path: str = field(
@@ -90,18 +125,6 @@ class DataArguments:
     )
     decompound_mode: str = field(
         default="mixed",
-        metadata={"help": ""}
-    )
-    sp_max_features: int = field(
-        default=50000,
-        metadata={"help": "Max features used for TF-IDF Vectorizer."}
-    )
-    sp_ngram_range: List[int] = lambda_field(
-        default=[1,2],
-        metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
-    )
-    retrieval_tokenizer_name: str = field(
-        default="mecab",
         metadata={"help": ""}
     )
     b: float = field(
@@ -176,7 +199,8 @@ class DataArguments:
         default=0.1,
         metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
     )
-    rebuilt_index: bool = field(
-        default=False,
-        metadata={"help": ""}
-    )
+    
+    
+@dataclass
+class MrcDataArguments(ElasticSearchArguments):
+    pass

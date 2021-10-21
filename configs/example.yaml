@@ -1,0 +1,105 @@
+DataArguments:
+
+  # DataPathArguments
+  dataset_name: ./data/aistage-mrc/train_dataset
+  dataset_path: ./data/aistage-mrc
+  context_path: preprocess_wiki.json
+  overwrite_cache: False
+  preprocessing_num_workers: null
+  
+  # TokenizerArguments
+  max_seq_length: 384
+  pad_to_max_length: False
+  doc_stride: 128
+  max_answer_length: 30
+  
+  # RetrievalArguments
+  rebuilt_index: True
+  retrieval_tokenizer_name: mecab
+  sp_max_features: 50000
+  sp_ngram_range: [1,2]
+  top_k_retrieval: 35
+  use_faiss: False
+  retrieval_mode: elastic_engine
+  retrieval_name: elastic_search
+  eval_retrieval: True
+  num_clusters: 64
+  
+  # ElasticSearchArguments
+  index_name: wiki-index
+  stopword_path: user_dic/my_stop_dic.txt
+  decompound_mode: mixed
+  b: 0.75
+  k1: 1.2
+  es_host_address: localhost:9200
+  es_similarity: bm25_similarity
+  use_korean_stopwords: False
+  use_korean_synonyms: False
+  lowercase: False
+  nori_readingform: False
+  cjk_bigram: False
+  decimal_digit: False
+  dfr_basic_model: g
+  dfr_after_effect: l
+  es_normalization: h2
+  dfi_measure: standardized
+  ib_distribution: ll
+  ib_lambda: df
+  lmd_mu: 2000
+  lmjm_lambda: 0.1
+  
+ModelingArguments:
+
+  # ModelArguments
+  model_name_or_path: klue/bert-base
+  reader_type: extractive
+  architectures: ExtractiveReaderBaselineModel
+  config_name: null
+  tokenizer_name: klue/bert-base
+  model_cache_dir: cache
+  model_init: basic
+  
+  # ModelHeadArguments
+  model_head: conv
+  qa_conv_out_channel: 1024
+  qa_conv_input_size: 512
+  qa_conv_n_layers: 5
+  
+TrainingArguments:
+
+  # HfTrainingArguments
+  report_to: wandb
+  run_name: run_test
+  output_dir: outputs/run_test
+  overwrite_output_dir: False
+  learning_rate: 2e-6
+  do_train: True
+  do_eval: True
+  do_predict: True # eval_retrieval = True 필수
+  evaluation_strategy: epoch
+  save_strategy: epoch
+  per_device_train_batch_size: 12
+  per_device_eval_batch_size: 12
+  num_train_epochs: 10
+  # eval_steps: 100
+  # save_steps: 100
+  save_total_limit: 3
+  fp16: True
+  weight_decay: 0.01
+  warmup_steps: 200
+  load_best_model_at_end: True
+  metric_for_best_model: exact_match
+  logging_dir: logs
+  lr_scheduler_type: cosine
+
+  # Seq2SeqTrainingArguments
+  sortish_sampler: False
+  predict_with_generate: False
+  generation_max_length: null
+  generation_num_beams: null
+  
+  
+ProjectArguments:
+
+  # AnalyzerArguments
+  wandb_project: klue_mrc
