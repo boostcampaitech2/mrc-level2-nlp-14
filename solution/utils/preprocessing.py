@@ -1,28 +1,31 @@
 import os
+from functools import partial
+
 from transformers import (
     HfArgumentParser,
-    TrainingArguments,
 )
+import transformers
 
 from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
     ModelingArguments,
+    NewTrainingArguments,
+    ProjectArguments
 )
-from solution.reader.core import (
-    question_column_name,
-    context_column_name,
-    answer_column_name,
+from solution.utils.constant import (
+    QUESTION_COLUMN_NAME,
+    CONTEXT_COLUMN_NAME,
+    ANSWER_COLUMN_NAME,
 )
-
 
 def tokenize_examples(examples, tokenizer):
     command_args = get_args_parser()
     parser = HfArgumentParser(
-        (ModelingArguments, DataArguments, TrainingArguments)
+        (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
     )
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
+    data_args, _, _, _ = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
 
     pad_on_right = tokenizer.padding_side == "right"
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
@@ -30,8 +33,8 @@ def tokenize_examples(examples, tokenizer):
     # truncation과 padding(length가 짧을때만)을 통해 toknization을 진행하며, stride를 이용하여 overflow를 유지합니다.
     # 각 example들은 이전의 context와 조금씩 겹치게됩니다.
     tokenized_examples = tokenizer(
-        examples[question_column_name if pad_on_right else context_column_name],
-        examples[context_column_name if pad_on_right else question_column_name],
+        examples[QUESTION_COLUMN_NAME if pad_on_right else CONTEXT_COLUMN_NAME],
+        examples[CONTEXT_COLUMN_NAME if pad_on_right else QUESTION_COLUMN_NAME],
         truncation="only_second" if pad_on_right else "only_first",
         max_length=max_seq_length,
         stride=data_args.doc_stride,
@@ -44,7 +47,7 @@ def tokenize_examples(examples, tokenizer):
 
 
 # Train preprocessing / 전처리를 진행합니다.
-def prepare_train_features(examples, tokenizer):
+def ext_prepare_train_features(examples, tokenizer):
     tokenized_examples = tokenize_examples(examples, tokenizer)
     pad_on_right = tokenizer.padding_side == "right"
 
@@ -67,7 +70,7 @@ def prepare_train_features(examples, tokenizer):
 
         # 하나의 example이 여러개의 span을 가질 수 있습니다.
         sample_index = sample_mapping[i]
-        answers = examples[answer_column_name][sample_index]
+        answers = examples[ANSWER_COLUMN_NAME][sample_index]
 
         # answer가 없을 경우 cls_index를 answer로 설정합니다(== example에서 정답이 없는 경우 존재할 수 있음).
         if len(answers["answer_start"]) == 0:
@@ -110,8 +113,35 @@ def prepare_train_features(examples, tokenizer):
     return tokenized_examples
 
 
+def gen_prepare_train_features(examples, tokenizer):
+    """Function for preprocessing training features"""
+    inputs = [f"question: {q}  context: {c} </s>" for q, c in zip(examples["question"], examples["context"])]
+    targets = [f'{a["text"][0]} </s>' for a in examples['answers']]
+    model_inputs = tokenizer(
+        inputs,
+        max_length=max_source_length,
+        padding=padding,
+        truncation=True
+    )
+
+    # targets(label)을 위해 tokenizer 설정
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(
+            targets,
+            max_length=max_target_length,
+            padding=padding,
+            truncation=True
+        )
+
+    model_inputs["labels"] = labels["input_ids"]
+    model_inputs["example_id"] = []
+    for i in range(len(model_inputs["labels"])):
+        model_inputs["example_id"].append(examples["id"][i])
+    return model_inputs
+
+
 # Validation preprocessing
-def prepare_validation_features(examples, tokenizer):
+def ext_prepare_validation_features(examples, tokenizer):
     tokenized_examples = tokenize_examples(examples, tokenizer)
     pad_on_right = tokenizer.padding_side == "right"
 
@@ -137,3 +167,25 @@ def prepare_validation_features(examples, tokenizer):
             for k, o in enumerate(tokenized_examples["offset_mapping"][i])
         ]
     return tokenized_examples
+
+
+EXT_PREPARE_FEATURES = {'train' : ext_prepare_train_features,
+                    'valid' : ext_prepare_validation_features}
+
+GEN_PREPARE_FEATURES =  {'train' : gen_prepare_train_features,
+                    'valid' : gen_prepare_train_features}
+
+
+def ext_prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):
+    """ Get prepare functions. prepare_train_features or prepare_validation_features """
+    return partial(
+                EXT_PREPARE_FEATURES[split],
+                tokenizer=tokenizer,
+            )
+
+def gen_prepare_features(split:str, tokenizer:transformers.PreTrainedTokenizer):
+    """ Get prepare functions. prepare_train_features or prepare_validation_features """
+    return partial(
+                GEN_PREPARE_FEATURES[split],
+                tokenizer=tokenizer,
+            )

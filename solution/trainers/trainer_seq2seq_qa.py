@@ -13,7 +13,7 @@ from transformers.trainer_utils import (
 )
 from transformers.debug_utils import DebugOption
 
-from solution.traniers.core import BaseTrainer
+from solution.trainers.core import BaseTrainer
 
 
 if is_datasets_available():
@@ -23,8 +23,8 @@ if is_torch_tpu_available():
     import torch_xla.core.xla_model as xm
     import torch_xla.debug.metrics as met
 
-
-class QuestionAnsweringTrainer(BaseTrainer):
+# TODO Implement this for Generative Model
+class QuestionAnsweringSeq2SeqTrainer(BaseTrainer):
     
     def __init__(
         self, 
@@ -37,6 +37,7 @@ class QuestionAnsweringTrainer(BaseTrainer):
         self.eval_examples = eval_examples
         self.post_process_function = post_process_function
 
+    # TODO Add Generate feature 
     def evaluate(
         self,
         eval_dataset: Optional[datasets.Dataset] = None,

@@ -1,3 +1,4 @@
+""" Deprecated file (for new_run.py) """
 # coding=utf-8
 # Copyright 2020 The HuggingFace Team All rights reserved.
 #
@@ -318,7 +319,7 @@ def postprocess_qa_predictions(
 
 def check_no_error(
     data_args: DataTrainingArguments,
-    training_args: TrainingArguments,
+    training_args: NewTrainingArguments,
     datasets: DatasetDict,
     tokenizer,
 ) -> Tuple[Any, int]:

@@ -25,20 +25,17 @@ from typing import Optional, Tuple
 import numpy as np
 from tqdm.auto import tqdm
 
-from transformers import (
-    HfArgumentParser,
-    TrainingArguments,
-    EvalPrediction,
-)
-
+from transformers import EvalPrediction
 from solution.args import (
     HfArgumentParser,
     get_args_parser,
     DataArguments,
     ModelingArguments,
+    NewTrainingArguments,
+    ProjectArguments,
 )
-from solution.reader.core import (
-    answer_column_name,
+from solution.utils.constant import (
+    ANSWER_COLUMN_NAME,
 )
 
 logger = logging.getLogger(__name__)
@@ -58,13 +55,13 @@ def save_pred_json(
 
     prediction_file = os.path.join(
         output_dir,
-        "predictions.json" if prefix is None else f"predictions_{prefix}".json,
+        "predictions.json" if prefix is None else f"predictions_{prefix}.json",
     )
     nbest_file = os.path.join(
         output_dir,
         "nbest_predictions.json"
         if prefix is None
-        else f"nbest_predictions_{prefix}".json,
+        else f"nbest_predictions_{prefix}.json",
     )
 
     logger.info(f"Saving predictions to {prediction_file}.")
@@ -350,10 +347,10 @@ def postprocess_qa_predictions(
 def post_processing_function(examples, features, predictions, training_args):
     command_args = get_args_parser()
     parser = HfArgumentParser(
-        (ModelingArguments, DataArguments, TrainingArguments)
+        (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
     )
-    model_args, data_args, training_args = parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
-
+    data_args, _, _, _ = \
+        parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
 
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     predictions = postprocess_qa_predictions(
@@ -372,7 +369,7 @@ def post_processing_function(examples, features, predictions, training_args):
 
     elif training_args.do_eval:
         references = [
-            {"id": ex["id"], "answers": ex[answer_column_name]}
+            {"id": ex["id"], "answers": ex[ANSWER_COLUMN_NAME]}
             for ex in examples
         ]
         return EvalPrediction(

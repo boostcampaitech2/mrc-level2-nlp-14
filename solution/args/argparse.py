@@ -31,7 +31,7 @@ class HfArgumentParser(ArgumentParser):
         outputs = []
         for dtype in self.dataclass_types:
             keys = {f.name for f in dataclasses.fields(dtype) if f.init}
-            arg_name = dtype.__mro__[-2].__name__
+            arg_name = dtype.__mro__[0].__name__ # -2 -> 0 becaues of MRO
             inputs = {k: v for k, v in data[arg_name].items() if k in keys}
             obj = dtype(**inputs)
             outputs.append(obj)
@@ -58,15 +58,24 @@ class HfArgumentParser(ArgumentParser):
         outputs = []
         for dtype in self.dataclass_types:
             keys = {f.name for f in dataclasses.fields(dtype) if f.init}
-            arg_name = dtype.__mro__[-2].__name__
-            inputs = {k: v for k, v in data[arg_name].items() if k in keys}
+            arg_name = dtype.__mro__[0].__name__ # -2 -> 0 becaues of MRO
+            '''
+            dtype이 <class 'solution.args.training_args.NewTrainingArguments'>일때 dtype.__mro__
+            <class 'solution.args.data_args.DataArguments'> (<class 'solution.args.data_args.DataArguments'>, <class 'object'>)
+<class 'solution.args.training_args.NewTrainingArguments'> (<class 'solution.args.training_args.NewTrainingArguments'>, <class 'transformers.training_args.TrainingArguments'>, <class 'object'>)
+            '''
+            inputs = self.new_method(data, keys, arg_name)
             obj = dtype(**inputs)
             outputs.append(obj)
         return (*outputs,)
 
+    def new_method(self, data, keys, arg_name):
+        inputs = {k: v for k, v in data[arg_name].items() if k in keys}
+        return inputs
+
 
 def get_args_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
+    parser.add_argument('--config', '-c', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
     command_args = parser.parse_args()
     return command_args
