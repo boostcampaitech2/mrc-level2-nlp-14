@@ -46,16 +46,16 @@ def get_masked_dataset(train_data_path):
     
     return new_dataset
 
-def make_word_dict(tokens, cls_token, sep_token):
+def make_word_dict(tokens, tokenizer, answer):
     word_start = False
     word_index = {}
     word = ''
     index = []
     
     for i, t in enumerate(tokens):
-        if t == cls_token:
+        if t == tokenizer.cls_token:
             continue
-        elif t == sep_token:
+        elif t == tokenizer.sep_token:
             break
         if t.startswith('▁') and not word_start:
             word_start = True
@@ -63,7 +63,8 @@ def make_word_dict(tokens, cls_token, sep_token):
             index.append(i)
             if tokens[i+1].startswith('▁'):
                 word_start = False
-                word_index[word.replace('▁', '')] = index
+                if word not in answer:
+                    word_index[word.replace('▁', '')] = index
                 word = ''
                 index = []
         if not t.startswith('▁') and word_start:
@@ -71,7 +72,8 @@ def make_word_dict(tokens, cls_token, sep_token):
             index.append(i)
             if i < 383 and (tokens[i+1].startswith('▁') or tokens[i+1] == sep_token):
                 word_start = False
-                word_index[word.replace('▁', '')] = index
+                if word_ not in answer:
+                    word_index[word.replace('▁', '')] = index
                 word = ''
                 index = []
 
