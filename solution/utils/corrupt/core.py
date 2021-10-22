@@ -4,11 +4,14 @@ import torch
 import pickle
 import numpy as np
 from solution.utils import ext_prepare_train_features, ext_prepare_validation_features
-from datasets import load_from_disk, DatasetDict
+from datasets import load_from_disk, DatasetDict, Dataset
 from tqdm.auto import tqdm
-from torch.nn.functional import cosine_similarity
+#from torch.nn.functional import cosine_similarity
 from sentence_transformers import SentenceTransformer, util
 from transformers import AutoTokenizer
+from konlpy.tag import Mecab
+import random
+import re
 ### <<<
 
 ### >>> 명훈님 라이브러리 디펜던시
@@ -17,11 +20,14 @@ import numpy as np
 
 ### >>> 진규님 작업 범위
 
-def save_pickle(data_set):
-    file=open('./test.pkl',"wb")
+def save_pickle(file_name, data_set):
+    file=open(file_name,"wb")
     pickle.dump(data_set,file)
     file.close()
     
+def cosine_similarity(A, B):
+    return dot(A, B) / (norm(A) * norm(B))
+
 def get_masked_dataset(train_data_path):
     tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
     
@@ -42,7 +48,7 @@ def get_masked_dataset(train_data_path):
         'validation': tokenized_valid_dataset
     })
     
-    save_pickle(new_dataset)
+    save_pickle("./test.pkl", new_dataset)
     
     return new_dataset
 
@@ -72,7 +78,7 @@ def make_word_dict(tokens, tokenizer, answer):
             index.append(i)
             if i < 383 and (tokens[i+1].startswith('▁') or tokens[i+1] == sep_token):
                 word_start = False
-                if word_ not in answer:
+                if word not in answer:
                     word_index[word.replace('▁', '')] = index
                 word = ''
                 index = []
@@ -82,12 +88,12 @@ def make_word_dict(tokens, tokenizer, answer):
 def mask_span_unit(train_dataset, tokenizer):
     pad_idx = 0
     top_k = 20
-    print("in")
+    new_ids=[]
+    
     model = SentenceTransformer('sentence-transformers/xlm-r-100langs-bert-base-nli-stsb-mean-tokens')
     mask_token = tokenizer.mask_token_id
     
     for i, input_id in tqdm(enumerate(train_dataset['input_ids'])):
-        print('working')
         sep_idx = np.where(np.array(input_id) == tokenizer.sep_token_id)[0][0]
         
         if tokenizer.pad_token_id in np.array(input_id):
@@ -122,12 +128,55 @@ def mask_span_unit(train_dataset, tokenizer):
         
         for span_idx in list(span_to_mask):
             input_id[span_idx] = mask_token
+        
+        print(input_id)
+        new_ids.append(input_id) 
     
-        train_dataset['input_ids'][i] = input_id
+    return Dataset.from_dict({
+        'input_ids': new_ids,
+        'end_positions': train_dataset['end_positions'],
+        'attention_mask': train_dataset['attention_mask'],
+        'start_positions': train_dataset['start_positions'],
+    })
+
+def make_question_random_masking(train_data_path):
+    context_list = []
+    question_list = []
+    id_list=[]
+    answer_list=[]
     
-    print(train_dataset['input_ids'][:5])
+    tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
     
-    return train_dataset
+    train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
+    val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
+    
+    mecab = Mecab()
+    for i in tqdm(range(train_dataset.num_rows)):
+        text = train_dataset["question"][i]
+        
+        # 단어 기준 Masking
+        for word, pos in mecab.pos(text):
+            # 하나의 단어만 30% 확률로 Masking
+            if pos in {"NNG", "NNP"} and (random.random() > 0.7):
+                context_list.append(train_dataset["context"][i])
+                question_list.append(re.sub(word, tokenizer.mask_token, text)) # tokenizer.mask_token
+                id_list.append(train_dataset[i]["id"])
+                answer_list.append(train_dataset[i]["answers"])
+    
+    # list를 Dataset 형태로 변환
+    new_set = Dataset.from_dict({"id" : id_list,
+                                        "context": context_list, 
+                                        "question": question_list,
+                                        "answers": answer_list})
+    
+    new_dataset = DatasetDict({
+        'train': new_set,
+        'validation': val_dataset
+    })
+    
+    save_pickle('./test2.pkl', new_dataset)
+    
+    return new_dataset
         
 ### <<< 
 
