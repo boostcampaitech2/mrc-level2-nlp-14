@@ -3,6 +3,9 @@ import os
 import torch
 import pickle
 import numpy as np
+from numpy import dot
+from numpy.linalg import norm
+from functools import partial
 from solution.utils import ext_prepare_train_features, ext_prepare_validation_features
 from datasets import load_from_disk, DatasetDict, Dataset
 from tqdm.auto import tqdm
@@ -29,15 +32,31 @@ def cosine_similarity(A, B):
     return dot(A, B) / (norm(A) * norm(B))
 
 def get_masked_dataset(train_data_path):
+
     tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
     
     raw_train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
     raw_val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
-    
+    column_names=raw_train_dataset.column_names
     print("data loaded")
     
-    tokenized_train_dataset = ext_prepare_train_features(raw_train_dataset, tokenizer)
-    tokenized_valid_dataset = ext_prepare_validation_features(raw_val_dataset, tokenizer)
+    _ext_prepare_train_features = partial(ext_prepare_train_features, tokenizer=tokenizer)
+    
+    tokenized_train_dataset = raw_train_dataset.map(
+        _ext_prepare_train_features,
+        batched=True,
+        #num_proc=4,
+        remove_columns=column_names,
+    )
+    
+    _ext_prepare_validation_features = partial(ext_prepare_validation_features, tokenizer=tokenizer)
+    
+    tokenized_valid_dataset = raw_val_dataset.map(
+        _ext_prepare_validation_features,
+        batched=True,
+        #num_proc=4,
+        remove_columns=column_names,
+    )
     
     print("tokenized")
     
@@ -54,6 +73,7 @@ def get_masked_dataset(train_data_path):
 
 def make_word_dict(tokens, tokenizer, answer):
     word_start = False
+    second_sep = False
     word_index = {}
     word = ''
     index = []
@@ -62,24 +82,30 @@ def make_word_dict(tokens, tokenizer, answer):
         if t == tokenizer.cls_token:
             continue
         elif t == tokenizer.sep_token:
+            second_sep=True
+            continue
+        elif t == tokenizer.sep_token and second_sep:
             break
-        if t.startswith('▁') and not word_start:
+        elif t == tokenizer.pad_token:
+            break
+        
+        if not t.startswith('#') and not word_start:
             word_start = True
             word += t
             index.append(i)
-            if tokens[i+1].startswith('▁'):
+            if not tokens[i+1].startswith('#'):
                 word_start = False
-                if word not in answer:
-                    word_index[word.replace('▁', '')] = index
+                if word != answer:
+                    word_index[word.replace('#', '')] = index
                 word = ''
                 index = []
-        if not t.startswith('▁') and word_start:
+        if t.startswith('#') and word_start:
             word += t
             index.append(i)
-            if i < 383 and (tokens[i+1].startswith('▁') or tokens[i+1] == sep_token):
+            if i < 383 and (not tokens[i+1].startswith('#') or tokens[i+1] == tokenizer.sep_token):
                 word_start = False
-                if word not in answer:
-                    word_index[word.replace('▁', '')] = index
+                if  word != answer:
+                    word_index[word.replace('#', '')] = index
                 word = ''
                 index = []
 
@@ -129,7 +155,6 @@ def mask_span_unit(train_dataset, tokenizer):
         for span_idx in list(span_to_mask):
             input_id[span_idx] = mask_token
         
-        print(input_id)
         new_ids.append(input_id) 
     
     return Dataset.from_dict({
