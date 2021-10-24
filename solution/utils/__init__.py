@@ -17,4 +17,5 @@ from solution.utils.corrupt.core import (
     make_word_dict,
     mask_span_unit,
     make_question_random_masking,
+    make_emb_mask_dataset,
 )
