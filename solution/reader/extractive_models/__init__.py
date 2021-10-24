@@ -5,6 +5,7 @@ from transformers import (
 
 from solution.reader.extractive_models.modeling_bart import *
 from solution.reader.extractive_models.modeling_bert import *
+from solution.reader.extractive_models.modeling_roberta import *
 
 from dataclasses import asdict
 
@@ -31,6 +32,8 @@ def ext_model_init(model_args):
         from_tf=bool(".ckpt" in model_args.model_name_or_path),
         config=config,
     )
+    print(model_cls)
+    print(model)
     return model
 
 
