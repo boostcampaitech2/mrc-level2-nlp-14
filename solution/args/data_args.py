@@ -58,13 +58,6 @@ class TokenizerArguments(DataPathArguments):
             "help": "When splitting up a long document into chunks, how much stride to take between chunks."
         },
     )
-    max_answer_length: int = field(
-        default=30,
-        metadata={
-            "help": "The maximum length of an answer that can be generated. This is needed because the start "
-            "and end predictions are not conditioned on one another."
-        },
-    )
     return_token_type_ids: bool = field(
         default=False,
         metadata={"help": ""}

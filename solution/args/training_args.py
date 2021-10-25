@@ -5,7 +5,18 @@ from solution.args.base import TrainingArguments
 
 
 @dataclass
-class Seq2SeqTrainingArguments(TrainingArguments):
+class QATrainingArguments(TrainingArguments):
+    max_answer_length: int = field(
+        default=30,
+        metadata={
+            "help": "The maximum length of an answer that can be generated. This is needed because the start "
+            "and end predictions are not conditioned on one another."
+        },
+    )
+
+    
+@dataclass
+class Seq2SeqTrainingArguments(QATrainingArguments):
     sortish_sampler: bool = field(
         default=False, 
         metadata={"help": "Whether to use SortishSampler or not."}
