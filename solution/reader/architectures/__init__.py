@@ -1,4 +1,5 @@
 from transformers import AutoConfig, PreTrainedModel
+from transformers import PreTrainedTokenizer
 
 from .models import *
 from ...args import ModelArguments
@@ -33,7 +34,8 @@ def _get_model(
 
 def basic(
     model_args: ModelArguments, 
-    default_model: PreTrainedModel
+    default_model: PreTrainedModel,
+    tokenizer: PreTrainedTokenizer,
 ):
     config = _get_config(model_args)
     model = _get_model(model_args, default_model, config)
@@ -43,14 +45,16 @@ def basic(
 def add_qaconv_head(
     model_args: ModelArguments,
     default_model: PreTrainedModel,
+    tokenizer: PreTrainedTokenizer,
 ):
     assert model_args.reader_type != "extractive"
     config = _get_config(model_args)
     config.model_head = model_args.model_head
-    if config.model_head == "conv":
+    if "conv" in config.model_head == :
         config.qa_conv_out_channel = model_args.qa_conv_out_channel
         config.qa_conv_input_size = model_args.qa_conv_input_size
         config.qa_conv_n_layers = model_args.qa_conv_n_layers
+    config.sep_token_id = tokenizer.sep_token_id
     model = _get_model(model_args, default_model, config)
     return model
 

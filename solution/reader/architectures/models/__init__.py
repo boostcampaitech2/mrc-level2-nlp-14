@@ -20,7 +20,7 @@ class AutoModelForQuestionAnswering(AutoQA):
         
         
 class AutoModelForSeq2SeqLM(AutoS2SLM):
-    reader_type: str = "abstractive"
+    reader_type: str = "generative"
     
     def __init__(self, config):
         super().__init__(config)

@@ -4,7 +4,7 @@ from transformers import (
 
 
 class MT5ForConditionalGeneration(CG):
-    reader_type: str = "abstractive"
+    reader_type: str = "generative"
     
     def __init__(self, config):
         super().__init__(config)
