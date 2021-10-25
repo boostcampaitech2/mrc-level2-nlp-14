@@ -1,13 +1,13 @@
 from .readers import (
     ExtractiveReader,
-    AbstractiveReader,
+    GenerativeReader,
     EnsembleReader,
     RetroReader,
 )
 
 READER_HOST = {
     "extractive": ExtractiveReader,
-    "abstractive": AbstractiveReader,
+    "generative": GenerativeReader,
     "ensemble": EnsembleReader,
     "retro": RetroReader,
 }
