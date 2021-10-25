@@ -1,250 +1,103 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
-# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-import os
-import abc
-
-from dataclasses import asdict, dataclass
-
-from datasets import load_from_disk, Dataset
-from numpy.core.numeric import NaN
-from transformers import AutoTokenizer
+import inspect
+from typing import Optional, Callable, List
 from functools import partial
+from contextlib import contextmanager
 
-from transformers import (
-    AutoTokenizer,
-    DataCollatorWithPadding,
-    DataCollatorForSeq2Seq,
-    set_seed,
-)
+import torch
+from datasets import Dataset
 
-from solution.args import (
-    DataArguments,
-    NewTrainingArguments,
-    ModelingArguments,
-)
+from transformers.utils import logging
 
-from solution.utils import (
-    check_no_error,
-)
-
-from solution.reader.extractive_models import EXT_MODEL_INIT_FUNC
-from solution.reader.generative_models import GEN_MODEL_INIT_FUNC
+from .trainers import BaseTrainer
+from ..args import ModelArguments
+from .architectures import MODEL_INIT
 
 
-class ReaderBase():
-    """ Base class for Reader module """
+logger = logging.get_logger(__name__)
+
+TRAINER_BASE_PARAMS = list(inspect.signature(BaseTrainer.__init__).parameters)
+
+
+class ReaderBase:
+    _mode: str = "train"
+    mode_candidate: List[str] = ["train", "evaluate", "predict"]
     
-    def __init__(self, data_args, training_args, model_args):
-        self.data_args = data_args
-        self.training_args = training_args
+    def __init__(self, model_args: ModelArguments):
+        self._trainer = None
         self.model_args = model_args
-    
-    @abc.abstractmethod
-    def data_collator(self):
-        """ Get dataset (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def datasets(self):
-        """ Get train_dataset (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def train_dataset(self):
-        """ Get train_dataset (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def eval_dataset(self):
-        """ Get eval_dataset (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def retrieved_eval_dataset(self):
-        """ Get eval_dataset (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def post_process_function(self):
-        """ Get post_process_function (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def max_seq_length(self):
-        """ Get post_process_function (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def model_config(self):
-        """ Get model_config (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def model_init(self):
-        """ Get model init function (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def tokenizer(self):
-        """ Get tokenizer (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def pre_process_function(self):
-        """ Get pre_process_function (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def trainer(self):
-        """ Get trainer (fix name convention) """
-        pass
-
-    @abc.abstractmethod
-    def last_checkpoint(self):
-        """ Get post_process_function (fix name convention) """
-        pass
-
-    
-
-    def _set_initial_setup(self):
-        """ Initial Set up attributes """
-        # Seed를 고정하고 전체 데이터셋과 train, test set을 불러옵니다.
-        set_seed(self.training_args.seed)
-        self.datasets = load_from_disk(self.data_args.dataset_name)
-        root_data_dir = os.path.dirname(self.data_args.dataset_name)
-        self.test_datasets = load_from_disk(os.path.join(root_data_dir, 'test_dataset'))
-
-        # AutoConfig를 이용하여 pretrained model 과 tokenizer를 불러옵니다.
-        # argument로 원하는 모델 이름을 설정하면 옵션을 바꿀 수 있습니다.
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_args.tokenizer_name
-            if self.model_args.tokenizer_name
-            else self.model_args.model_name_or_path,
-            # 'use_fast' argument를 True로 설정할 경우 rust로 구현된 tokenizer를 사용할 수 있습니다.
-            # False로 설정할 경우 python으로 구현된 tokenizer를 사용할 수 있으며,
-            # rust version이 비교적 속도가 빠릅니다.
-            use_fast=True,
+        model_init = self.get_model_init_func(model_args.model_init)
+        self.model_init = partial(
+            model_init,
+            model_args=model_args,
+            default_model=self.default_model,
         )
         
-        if self.model_args.method == "ext":
-            _model_init = EXT_MODEL_INIT_FUNC.get(self.model_args.model_init)
-            self.data_collator = DataCollatorWithPadding(
-                self.tokenizer, pad_to_multiple_of=8 if self.training_args.fp16 else None
-            )
-        elif self.model_args.method == "gen":
-            _model_init = GEN_MODEL_INIT_FUNC.get(self.model_args.model_init)
-            label_pad_token_id = self.tokenizer.pad_token_id
-            self.data_collator = DataCollatorForSeq2Seq(
-                self.tokenizer, label_pad_token_id=label_pad_token_id, pad_to_multiple_of=8 if self.training_args.fp16 else None
-            )
-
-        if _model_init is None:
-            raise ValueError("Check whether model_init is properly set or not")
-
-        self.model_init = partial(_model_init,
-                            model_args=self.model_args,
-                            )
-
-        self.logger.info(
-            type(self.training_args),
-            type(self.model_args),
-            type(self.datasets),
-            type(self.tokenizer),
-            type(self.model_init),
-        )
-        self.logger.info("*** Initial set-up of the Reader Model Completed ***")
-
-    def _set_preprocessing(self):
-        """ Pre-process the datasets """
-        # dataset을 전처리합니다.
-        # training과 evaluation에서 사용되는 전처리는 아주 조금 다른 형태를 가집니다.
-        if self.training_args.do_train:
-            column_names = self.datasets["train"].column_names
-        else:
-            column_names = self.datasets["validation"].column_names
-
-        # 오류가 있는지 확인합니다.
-        self.last_checkpoint, max_seq_length = check_no_error(
-            self.data_args, self.training_args, self.datasets, self.tokenizer
-        )
+    def get_model_init_func(self, model_init: str):
+        model_init = MODEL_INIT.get(model_init, None)
+        if model_init is None:
+            raise AttributeError
+        return model_init
+    
+    @property
+    def trainer_params(self):
+        trainer_init = self.default_trainer.__init__
+        signature = inspect.signature(trainer_init)
+        return list(signature.parameters)
+    
+    def set_trainer(self, **kwargs):
+        params = {}
+        for key in kwargs:
+            if key in TRAINER_BASE_PARAMS:
+                params.update({key: kwargs.get(key)})
+            elif key in self.trainer_params:
+                params.update({key: kwargs.get(key)})
+            else:
+                raise AttributeError
+        assert (params.get("tokenizer", None) is None and
+                params.get("data_collator", None) is None)
+        self._trainer = self.default_trainer(**params)
         
-        if self.training_args.do_train:
-            if "train" not in self.datasets:
-                raise ValueError("--do_train requires a train dataset")
-            self.train_dataset = self.datasets["train"]
-
-            # dataset에서 train feature를 생성합니다.
-            self.train_dataset = self.train_dataset.map(
-                self.pre_process_function(split='train', tokenizer=self.tokenizer),
-                batched=True,
-                num_proc=self.data_args.preprocessing_num_workers,
-                remove_columns=column_names,
-                load_from_cache_file=not self.data_args.overwrite_cache,
-            )
-
-        if self.training_args.do_eval:
-            if "train" not in self.datasets:
-                raise ValueError("--do_train requires a train dataset")
-            self.eval_dataset = self.datasets["validation"]
-
-            # Validation Feature 생성
-            self.eval_dataset = self.eval_dataset.map(
-                self.pre_process_function('valid', tokenizer=self.tokenizer),
-                batched=True,
-                num_proc=self.data_args.preprocessing_num_workers,
-                remove_columns=column_names,
-                load_from_cache_file=not self.data_args.overwrite_cache,
-            )
-
-        # train_dataset에서 불러온 validation -> context 존재 or retrieval로 대체
-        # test_dataset -> validation -> context 없음, only retrieval
-
-        self.logger.info("*** Pre-process the Datasets Completed ***")
-
-    def preprocessing_retrieved_doc(self, retrieved_examples:Dataset):
-        """ Pre-process the retrieved validation datasets """
-        # Context가 Retrieved passage로 채워진 validation set에 대해 전처리를 수행합니다.
-        column_names = retrieved_examples.column_names
-        retrieved_dataset = retrieved_examples.map(
-            self.pre_process_function('valid', tokenizer=self.tokenizer),
-            batched=True,
-            num_proc=self.data_args.preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=not self.data_args.overwrite_cache,
-        )
-        self.logger.info("*** Pre-process the Retrieved Dataset Completed ***")
-        return retrieved_dataset
-
-    @abc.abstractmethod
-    def set_trainer(self):
-        """ Set Hugginface Trainer """
-        pass
-
-    @abc.abstractmethod
-    def train(self, *args, **kwargs):
-        """ Call train method of self.trainer """
-        pass
-
-    @abc.abstractmethod
-    def evaluate(self, *args, **kwargs):
-        """ Call evaluate method of self.trainer """
-        pass
-
-    @abc.abstractmethod
-    def predict(self, *args, **kwargs):
-        """ Call predict method of self.trainer """
-        pass
+    @property
+    def mode(self):
+        return self._mode
+    
+    @mode.setter
+    def mode(self, val: str):
+        assert val in self.mode_candidate
+        self._mode = mode
+        
+    @contextmanager
+    def mode_change(self, mode: str):
+        _mode = self.mode
+        assert mode in self.mode_candidate
+        self.mode = mode
+        yield
+        self.mode = _mode
+        
+    def num_examples(self, dataset: Dataset):
+        return len(dataset)
+        
+    def save(self):
+        logger.info("Save trainer states, model, and tokenizer.")
+        self._trainer.save_model()
+        self._trainer.save_state()
+        
+    def save_metrics(self, split, metrics, dataset=None, combined=True):
+        logger.info("Save metrics")
+        if dataset is not None:
+            metrics[f"{split}_samples"] = self.num_examples(dataset)
+        self._trainer.log_metrics(split, metrics)
+        self._trainer.save_metrics(split, metrics, combined=True)
+    
+    def read(self, **kwargs):
+        assert self._trainer is not None
+        logger.info(f"***** {self.mode.title()} *****")
+        trainer_method = getattr(self._trainer, self.mode)
+        params = inspect.signature(trainer_method).parameters
+        use_kwargs = [kwargs[k] for k in kwargs.keys() if k in params]
+        results = trainer_method(use_kwargs)
+        if mode in ["train", "evaluate"]:
+            logger.info(f"***** {self.mode.title()} results *****")
+            for key, value in sorted(results.metrics.items()):
+                logger.info(f"\t{key} = {value}")
+        return results
