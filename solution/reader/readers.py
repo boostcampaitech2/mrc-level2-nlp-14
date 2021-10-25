@@ -18,8 +18,8 @@ class ExtractiveReader(ReaderBase):
     default_trainer: BaseTrainer = QuestionAnsweringTrainer
 
 
-class AbstractiveReader(ReaderBase):
-    reader_type: str = "abstractive"
+class GenerativeReader(ReaderBase):
+    reader_type: str = "generative"
     default_model: PreTrainedModel = AutoModelForSeq2SeqLM
     default_trainer: BaseTrainer = QuestionAnsweringSeq2SeqTrainer
 
