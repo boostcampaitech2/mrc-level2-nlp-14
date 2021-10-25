@@ -3,19 +3,20 @@ import json
 from datasets import Dataset
 from elasticsearch import Elasticsearch, helpers
 
-from solution.args import DataArguments
-from solution.retrieval.core import SearchBase
+from solution.args import MrcDataArguments
+from ..core import SearchBase
 
 
 class ElasticSearchBase(SearchBase):
     
-    def __init__(self, args: DataArguments, es: Elasticsearch):
+    def __init__(self, args: MrcDataArguments, es: Elasticsearch):
         super().__init__(args)
         self.engine = es
         self._index_config = None
         if args.rebuilt_index and self.is_exists_index():
             print("Rebuild index...")
             self.delete(self.index_name)
+            self.args.rebuilt_index = False
         if not self.is_exists_index():
             self.build_index(self.index_name)
         if self.index_config is None:

@@ -1,6 +1,13 @@
-from solution.args.argparse import HfArgumentParser
+from .argparse import HfArgumentParser
 
-from solution.args.data_args import MrcDataArguments
-from solution.args.modeling_args import MrcModelArguments
-from solution.args.training_args import MrcTrainingArguments
-from solution.args.project_args import MrcProjectArguments
+from .base import (
+    DataArguments,
+    ModelArguments,
+    TrainingArguments,
+    ProjectArguments,
+)
+
+from .data_args import MrcDataArguments
+from .model_args import MrcModelArguments
+from .training_args import MrcTrainingArguments
+from .project_args import MrcProjectArguments

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from dataclasses import dataclass, field
 
-from solution.args.base import ProjectArguments
+from .base import ProjectArguments
 
 
 """

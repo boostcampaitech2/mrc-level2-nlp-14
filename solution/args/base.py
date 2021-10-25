@@ -10,7 +10,7 @@ from transformers import TrainingArguments
 
 
 @dataclass
-class ModelingArguments:
+class ModelArguments:
     pass
 
 

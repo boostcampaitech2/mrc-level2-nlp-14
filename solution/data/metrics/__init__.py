@@ -1,7 +1,5 @@
 from datasets import load_metric
-from transformers import (
-    EvalPrediction,
-)
+from transformers import EvalPrediction
 
 
 def compute_metrics(p: EvalPrediction):

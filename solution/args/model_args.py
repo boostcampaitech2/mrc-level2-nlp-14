@@ -1,7 +1,7 @@
 from typing import List, Optional
 from dataclasses import dataclass, field
 
-from solution.args.base import ModelingArguments
+from .base import ModelArguments
 
 
 """
@@ -14,7 +14,7 @@ conv_out_channel -> qa_conv_out_channel
 """
 
 @dataclass
-class ModelArguments(ModelingArguments):
+class ModelingArguments(ModelArguments):
     """
     Arguments pertaining to which model/config/tokenizer we are going to fine-tune from.
     """
@@ -55,7 +55,7 @@ class ModelArguments(ModelingArguments):
     
     
 @dataclass
-class ModelHeadArguments(ModelArguments):
+class ModelHeadArguments(ModelingArguments):
     # 어떻게 구분지을지 고민하기
     model_head: str = field(
         default="conv",

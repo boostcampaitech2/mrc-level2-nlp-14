@@ -9,7 +9,7 @@ wandb/
 best_model/
 models/
 outputs/
-data/
+data/aistage-mrc/
 *.ipynb
 *.arrow
 *.yaml
@@ -24,6 +24,7 @@ __pycache__/
 # Data
 *.json
 *.csv
+*.xlsx
 *.txt
 *.lock
 *.npy

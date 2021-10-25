@@ -1,13 +1,13 @@
 from datasets import Dataset
 from elasticsearch import Elasticsearch, helpers
 
-from solution.args import DataArguments
-from solution.retrieval.elastic_engine.base import ElasticSearchBase
+from solution.args import MrcDataArguments
+from .base import ElasticSearchBase
 
 
 class ESRetrieval(ElasticSearchBase):
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         es = Elasticsearch(args.es_host_address)
         super().__init__(args, es)
         
@@ -30,7 +30,7 @@ class ESRetrieval(ElasticSearchBase):
                                              doc_indices,
                                              doc_contexts,
                                             )
-            return cqas
+            return self.dataframe_to_datasetdict(cqas)
         
         elif isinstance(query_or_dataset, list):
             return (doc_scores, doc_contexts)

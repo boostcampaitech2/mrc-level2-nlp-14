@@ -3,7 +3,12 @@ import faiss
 import pandas as pd
 from tqdm.auto import tqdm
 
-from solution.args import DataArguments
+from datasets import Dataset, DatasetDict
+
+from solution.utils.constant import (
+    MRC_EVAL_FEATURES,
+    MRC_PREDICT_FEATURES
+)
 
 
 class FaissMixin:
@@ -43,7 +48,7 @@ class FaissMixin:
             print("Faiss Indexer Saved.")
         
 
-class PandasMixin:
+class OutputMixin:
     
     def get_dataframe_result(
         self, 
@@ -69,12 +74,27 @@ class PandasMixin:
                 # Retrieve한 Passage의 id, score, context를 반환합니다.
                 "context_id": doc_indices[idx],
                 "context_score": doc_scores[idx],
-                "context": " ".join(contexts)
+                "context": self.process_topk_context(contexts)
             }
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환
                 tmp["original_context"] = example["context"]
                 tmp["answers"] = example["answers"]
             total.append(tmp)
-        
+            
         return pd.DataFrame(total)
+    
+    def dataframe_to_datasetdict(
+        self,
+        df: pd.DataFrame,
+        eval_mode: bool = True,
+    ) -> DatasetDict:
+        features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
+        datasets = DatasetDict(
+            {"validation": Dataset.from_pandas(df, features=features)}
+        )
+        return datasets
+        
+    def process_topk_context(self, contexts):
+        # self.args에 들어오는 option으로 top-k 처리
+        return " ".join(contexts)

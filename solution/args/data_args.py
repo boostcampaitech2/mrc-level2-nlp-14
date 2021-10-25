@@ -1,8 +1,8 @@
 from typing import List, Optional, Tuple
 from dataclasses import dataclass, field
 
-from solution.args.base import DataArguments
-from solution.args.argparse import lambda_field
+from .base import DataArguments
+from .argparse import lambda_field
 
 """
 DATA ARGS의 항목이 너무 많아서 지저분하다.
@@ -65,10 +65,22 @@ class TokenizerArguments(DataPathArguments):
             "and end predictions are not conditioned on one another."
         },
     )
+    return_token_type_ids: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
    
     
 @dataclass
 class RetrievalArguments(TokenizerArguments):
+    retrieval_mode: bool = field(
+        default="sparse",
+        metadata={"help": ""}
+    )
+    retrieval_name: bool = field(
+        default="tfidf",
+        metadata={"help": ""}
+    )
     rebuilt_index: bool = field(
         default=False,
         metadata={"help": ""}
@@ -94,14 +106,6 @@ class RetrievalArguments(TokenizerArguments):
     use_faiss: bool = field(
         default=False,
         metadata={"help": "Whether to build with faiss"}
-    )
-    retrieval_mode: bool = field(
-        default="sparse",
-        metadata={"help": ""}
-    )
-    retrieval_name: bool = field(
-        default="tfidf",
-        metadata={"help": ""}
     )
     eval_retrieval: bool = field(
         default=True,
