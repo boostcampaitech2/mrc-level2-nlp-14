@@ -7,6 +7,7 @@ import torch
 from datasets import Dataset
 
 from transformers.utils import logging
+from transformers import PreTrainedTokenizer
 
 from .trainers import BaseTrainer
 from ..args import ModelArguments
@@ -22,7 +23,11 @@ class ReaderBase:
     _mode: str = "train"
     mode_candidate: List[str] = ["train", "evaluate", "predict"]
     
-    def __init__(self, model_args: ModelArguments):
+    def __init__(
+        self, 
+        model_args: ModelArguments, 
+        tokenizer: PreTrainedTokenizer,
+    ):
         self._trainer = None
         self.model_args = model_args
         model_init = self.get_model_init_func(model_args.model_init)
@@ -30,6 +35,7 @@ class ReaderBase:
             model_init,
             model_args=model_args,
             default_model=self.default_model,
+            tokenizer=tokenizer,
         )
         
     def get_model_init_func(self, model_init: str):
