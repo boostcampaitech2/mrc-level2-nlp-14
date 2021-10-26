@@ -1,180 +1,144 @@
 import os
 import sys
-import logging
-import argparse
-
-import wandb
+import json
+import torch
 
 from solution.args import (
     HfArgumentParser,
-    get_args_parser,
-    DataArguments,
-    NewTrainingArguments,
-    ModelingArguments,
-    ProjectArguments
+    MrcDataArguments,
+    MrcModelArguments,
+    MrcTrainingArguments,
+    MrcProjectArguments,
 )
-from solution.retrieval import run_retrieval
-from solution.reader import (
-    ExtractiveReader,
-    GenerativeReader,
+from solution.data.metrics import compute_metrics
+from solution.data.processors import (
+    OdqaProcessor,
+    convert_examples_to_features,
+    post_processing_function
 )
-from solution.utils import (
-    set_seed,
-    compute_metrics,
-    post_processing_function,
-    gen_postprocessing_function,
-    ext_prepare_features,
-    gen_prepare_features
-)
+from solution.reader import READER_HOST
+from solution.retrieval import RETRIEVAL_HOST
+from solution.utils import set_seed, check_no_error
+
+from transformers import AutoTokenizer
+from transformers.utils import logging
 
 
-def main(command_args):
-    # 가능한 arguments 들은 ./arguments.py 나 transformer package 안의 src/transformers/training_args.py 에서 확인 가능합니다.
-    # --help flag 를 실행시켜서 확인할 수 도 있습니다.
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(
-        format="%(asctime)s - %(levelname)s - %(name)s -    %(message)s",
-        datefmt="%m/%d/%Y %H:%M:%S",
-        handlers=[logging.StreamHandler(sys.stdout)],
-        level=logging.INFO,
-    )
-    
+logging.set_verbosity_info()
+logger = logging.get_logger(__name__)
+
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["TOKENIZERS_PARALLELISM"] = "true"
+os.environ["TRANSFORMERS_VERBOSITY"] = "info"
+
+
+def main():
     parser = HfArgumentParser(
-        (DataArguments, NewTrainingArguments, ModelingArguments, ProjectArguments)
+        [MrcDataArguments,
+         MrcModelArguments,
+         MrcTrainingArguments,
+         MrcProjectArguments]
     )
-    data_args, training_args, model_args, project_args = \
-        parser.parse_yaml_file(yaml_file=os.path.abspath(command_args.config))
-
-    # Set-up WANDB
-    os.environ["WANDB_PROJECT"] = project_args.wandb_project
-
-    # Reader 모델 통합 관리 객체. 생성시에 데이터셋 및 모델 세팅 수행됨
-    if model_args.method == 'ext':
-        reader = ExtractiveReader(data_args=data_args, training_args=training_args, model_args=model_args,
-                                    compute_metrics=compute_metrics,
-                                    pre_process_function=ext_prepare_features,
-                                    post_process_function=post_processing_function,
-                                    logger=logger)
-    elif model_args.method == 'gen':
-        reader = GenerativeReader(data_args=data_args, training_args=training_args, model_args=model_args,
-                                    compute_metrics=compute_metrics,
-                                    pre_process_function=gen_prepare_features,
-                                    post_process_function=gen_postprocessing_function,
-                                    logger=logger)
+    if len(sys.argv) == 2 and sys.argv[1].endswith(".yaml"):
+        args = parser.parse_yaml_file(yaml_file=os.path.abspath(sys.argv[1]))
     else:
-        raise ValueError("Check whether model_args.method is 'ext or 'gen'")
-
-    '''
-    1. answer 존재 유무 : validation of train set / validation of test_set
-    2. context retrieval 유무 : eval_retrieval True / False
+        args = parser.parse_args_into_dataclasses()
+    data_args, model_args, training_args, project_args = args
     
-    - reader 모델의 성능 평가                : train_dataset['valid'], eval_retrieval = False
-    - reader와 retrieval 모델 조합의 성능 평가 : train_dataset['valid'], eval_retrieval = True
-    - submission 파일 생성                  : test_dataset['valid'], eval_retrieval = True
-    '''
-
-    # Trainer 객체 설정. Retireved Dataset이 Predict를 위해 주어졌을 때, 기존 저장된 eval_dataset과 swap
-    reader.set_trainer()
-    print(f"model is from {reader.model_args.model_name_or_path}")
-    print(f"data is from {reader.data_args.dataset_name}")
-
-    # do_eval, do_predict 둘 모두 True면 do_eval이 되지 않아 do_predict를 임시로 끔
-    # See solution.reader.postprocessing L326-336
-    do_predict = reader.training_args.do_predict
-    if reader.training_args.do_predict:
-        reader.training_args.do_predict = False
-
-    # do_train mrc model
-    if reader.training_args.do_train:
-        if reader.last_checkpoint is not None:
-            checkpoint = reader.last_checkpoint
+    set_seed(training_args.seed)
+    
+    print(f"model is from {model_args.model_name_or_path}")
+    print(f"data is from {data_args.dataset_name}")
+    
+    # wandb setting
+    os.environ["WANDB_PROJECT"] = project_args.wandb_project
+    
+    # Load Processor
+    processor = OdqaProcessor(data_args, model_args, training_args)
+    
+    # Load Retriever
+    retriever_cls = RETRIEVAL_HOST[data_args.retrieval_mode][data_args.retrieval_name]
+    retriever = retriever_cls(data_args)
+    
+    # Load Reader
+    reader_cls = READER_HOST[model_args.reader_type]
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_name if model_args.tokenizer_name is not None
+        else model_args.model_name_or_path,
+        use_auth_tokon=model_args.use_auth_token,
+    )
+    reader = reader_cls(model_args, tokenizer)
+    
+    train_features, train_datasets = convert_examples_to_features(processor, tokenizer)
+    
+    eval_features, eval_datasets = convert_examples_to_features(
+        processor, tokenizer, mode="eval")
+    
+    reader.set_trainer(
+        model_init=reader.model_init,
+        args=training_args,
+        train_dataset=train_features,
+        eval_dataset=eval_features,
+        eval_examples=eval_datasets,
+        compute_metrics=compute_metrics,
+        tokenizer=tokenizer,
+        post_process_function=post_processing_function,
+    )
+    
+    last_checkpoint, data_args.max_seq_length = check_no_error(
+        data_args, training_args, tokenizer,
+    )
+    logger.warning(f"LAST CHECKPOINT: {last_checkpoint}")
+    
+    # checkpoint setting
+    checkpoint = project_args.checkpoint
+    if checkpoint is None:
+        if last_checkpoint is not None:
+            checkpoint = last_checkpoint
         elif os.path.isdir(reader.model_args.model_name_or_path):
-            checkpoint = reader.model_args.model_name_or_path
-        else:
-            checkpoint = None
-
-        train_result = reader.trainer.train(resume_from_checkpoint=checkpoint)
-        reader.trainer.save_model() # Saves the tokenizer too for easy upload
-
-        metrics = train_result.metrics
-        metrics["train_samples"] = len(reader.trainer.train_dataset)
-
-        reader.trainer.log_metrics("train", metrics)
-        reader.trainer.save_metrics("train", metrics)
-        reader.trainer.save_state()
-
-        output_train_file = os.path.join(reader.training_args.output_dir, "train_results.txt")
+            checkpoint = model_args.model_name_or_path
+    logger.warning(f"CHECKPOINT: {checkpoint}")
+    
+    with reader.mode_change(mode="train"):
+        train_results = reader.read(resume_from_checkpoint=checkpoint)
+        reader.save_trainer()
+        reader.save_metrics("train", 
+                            train_results.metrics, 
+                            train_datasets)
+        checkpoint = training_args.output_dir
         
-        with open(output_train_file, "w") as writer:
-            logger.info("***** Train results *****")
-            for key, value in sorted(train_result.metrics.items()):
-                logger.info(f"  {key} = {value}")
-                writer.write(f"{key} = {value}\n")
-
-        # State 저장
-        reader.trainer.state.save_to_json(
-            os.path.join(reader.training_args.output_dir, "trainer_state.json")
-        )
-
-    # Evaluation
-    # train_dataset['validation']으로 성능을 평가합니다. retrieval 활용 여부에 따라
-    # 1. eval_retrieval == False : MRC Model의 단독 성능 평가
-    # 2. eval_retrieval == True  : MRC Model & Retrieval Model 조합의 성능 평가
+    eval_features, eval_datasets = convert_examples_to_features(
+        processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="eval")
     
-    # See solution.reader.postprocessing L326-336
-    if reader.training_args.do_eval:
-        retrieved_dataset = None
-        retrieved_examples = None
-        if reader.data_args.eval_retrieval:
-            logger.info("*** Evaluate with Retrieved passage ***")
-            retrieved_examples = run_retrieval(
-                datasets=reader.datasets,
-                training_args=reader.training_args,
-                data_args=reader.data_args,
-            )
-            retrieved_examples = retrieved_examples["validation"]
-            retrieved_dataset = reader.preprocessing_retrieved_doc(retrieved_examples)
-
-        logger.info("*** Evaluate ***")
-        metrics = reader.trainer.evaluate(eval_dataset=retrieved_dataset,
-                                          eval_examples=retrieved_examples)
-        metrics["eval_samples"] = len(reader.eval_dataset)
-        reader.trainer.log_metrics("eval", metrics)
-        reader.trainer.save_metrics("eval", metrics)
-
-    if do_predict:
-        reader.training_args.do_predict = True
     
-    # Submission
-    if reader.training_args.do_predict:
-        logger.info("*** Predict ***")
-        if not reader.data_args.eval_retrieval:
-            raise ValueError('*** For submission, you must use retireval model(set --eval_retrieval True --do_predict True ***')
-
-
-        retrieved_dataset = None
-        retrieved_examples = None
-        retrieved_examples = run_retrieval(
-            datasets=reader.test_datasets,
-            training_args=reader.training_args,
-            data_args=reader.data_args,
-        )
-        retrieved_examples = retrieved_examples["validation"]
-        retrieved_dataset = reader.preprocessing_retrieved_doc(retrieved_examples)
-
-        assert retrieved_dataset is not None
-        assert retrieved_examples is not None
-
-        predictions = reader.trainer.predict(
-            test_dataset=retrieved_dataset, test_examples=retrieved_examples
-        )
-        # predictions.json 은 postprocess_qa_predictions() 호출시 이미 저장됩니다.
-        print(
-            "No metric can be presented because there is no correct answer given. Job done!"
-        )
-
+    logger.warning(f"load from checkpoint {checkpoint}")
+    ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
+    state_dict = torch.load(ckpt_model_file, map_location="cpu")
+    reader._trainer._load_state_dict_in_model(state_dict)
+    del state_dict
+    torch.cuda.empty_cache()
+    
+    with reader.mode_change(mode="evaluate"):
+        eval_metrics = reader.read(eval_dataset=eval_features,
+                                   eval_examples=eval_datasets,
+                                   mode=reader.mode)
+        reader.save_metrics("eval",git s
+                            eval_metrics,
+                            eval_datasets)
+    
+    test_features, test_datasets = convert_examples_to_features(
+        processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="test")
+    
+    with reader.mode_change(mode="predict"):
+        pred_results = reader.read(test_dataset=test_features,
+                                   test_examples=test_datasets,
+                                   mode=reader.mode)
+        
+    # 오답노트 기능을 사용할 경우 Analyzer로 분석
+    # if project_args.report_to_wrong_answers:
+    #     report = Analyzer.make_report(eval_result)
+    #     Analyzer.post(report)
+    
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', type=str, default="configs/baseline.yaml", help='config file path (default: configs/baseline.yaml)')
-    command_args = parser.parse_args()
-    main(command_args)
+    main()

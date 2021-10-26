@@ -7,7 +7,6 @@ cache/
 prediction/
 wandb/
 best_model/
-models/
 outputs/
 data/aistage-mrc/
 *.ipynb
