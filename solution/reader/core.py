@@ -59,7 +59,7 @@ class ReaderBase:
                 params.update({key: kwargs.get(key)})
             else:
                 raise AttributeError
-        assert (params.get("tokenizer", None) is None and
+        assert (params.get("tokenizer", None) is None or
                 params.get("data_collator", None) is None)
         self._trainer = self.default_trainer(**params)
         
@@ -70,7 +70,7 @@ class ReaderBase:
     @mode.setter
     def mode(self, val: str):
         assert val in self.mode_candidate
-        self._mode = mode
+        self._mode = val
         
     @contextmanager
     def mode_change(self, mode: str):
@@ -83,8 +83,8 @@ class ReaderBase:
     def num_examples(self, dataset: Dataset):
         return len(dataset)
         
-    def save(self):
-        logger.info("Save trainer states, model, and tokenizer.")
+    def save_trainer(self):
+        logger.warning("Save trainer states, model, and tokenizer.")
         self._trainer.save_model()
         self._trainer.save_state()
         
@@ -95,15 +95,12 @@ class ReaderBase:
         self._trainer.log_metrics(split, metrics)
         self._trainer.save_metrics(split, metrics, combined=True)
     
-    def read(self, **kwargs):
+    def read(self, *args, **kwargs):
         assert self._trainer is not None
-        logger.info(f"***** {self.mode.title()} *****")
+        assert not args
+        logger.warning(f"***** {self.mode.title()} *****")
         trainer_method = getattr(self._trainer, self.mode)
         params = inspect.signature(trainer_method).parameters
-        use_kwargs = [kwargs[k] for k in kwargs.keys() if k in params]
-        results = trainer_method(use_kwargs)
-        if mode in ["train", "evaluate"]:
-            logger.info(f"***** {self.mode.title()} results *****")
-            for key, value in sorted(results.metrics.items()):
-                logger.info(f"\t{key} = {value}")
+        use_kwargs = {k:kwargs[k] for k in kwargs.keys() if k in params}
+        results = trainer_method(**use_kwargs)
         return results
