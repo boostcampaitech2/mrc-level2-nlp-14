@@ -1,26 +1,40 @@
 import os
+import gc
 import time
+import psutil
 import numpy as np
 import random
 import torch
-import logging
 
 from typing import Tuple, Any, Callable, List, Union, Dict
 from transformers import is_torch_available
 
 from transformers import PreTrainedTokenizerFast
 
-from ..args import NewTrainingArguments
+from transformers.utils import logging
 from transformers.trainer_utils import get_last_checkpoint
 
 from datasets import Dataset, DatasetDict
 
 from solution.args import (
-    DataArguments,
+    MrcDataArguments,
+    MrcTrainingArguments,
 )
 
 
-logger = logging.getLogger(__name__)
+logger = logging.get_logger(__name__)
+
+
+def _check_usage_of_cpu_and_memory():
+    pid = os.getpid()
+    py = psutil.Process(pid)
+    cpu_usage   = os.popen("ps aux | grep " + str(pid) + " | grep -v grep | awk '{print $3}'").read()
+    cpu_usage   = cpu_usage.replace("\n","")
+    memory_usage  = round(py.memory_info()[0] /2.**30, 2)
+    print("cpu usage\t\t:", cpu_usage, "%")
+    print("memory usage\t\t:", memory_usage, "%")
+    print("cuda memory allocated\t:", torch.cuda.memory_allocated())
+    print("cuda memory reserved\t:", torch.cuda.memory_reserved())
 
 
 def timer(dataset: bool = True):
@@ -58,9 +72,8 @@ def set_seed(seed: int = 42):
 
 
 def check_no_error(
-    data_args: DataArguments,
-    training_args: NewTrainingArguments,
-    datasets: DatasetDict,
+    data_args: MrcDataArguments,
+    training_args: MrcTrainingArguments,
     tokenizer,
 ) -> Tuple[Any, int]:
 
@@ -78,7 +91,7 @@ def check_no_error(
                 "Use --overwrite_output_dir to overcome."
             )
         elif last_checkpoint is not None:
-            logger.info(
+            logger.warning(
                 f"Checkpoint detected, resuming training at {last_checkpoint}. To avoid this behavior, change "
                 "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
             )
@@ -98,6 +111,4 @@ def check_no_error(
         )
     max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
-    if "validation" not in datasets:
-        raise ValueError("--do_eval requires a validation dataset")
     return last_checkpoint, max_seq_length
