@@ -351,7 +351,7 @@ def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_da
             batch_size = p_outputs.shape[0]
             
             q_outputs = q_outputs.view(batch_size,1,-1)
-            p_outputs = p_outputs.view(batch_size,-1,384)
+            p_outputs = torch.transpose(p_outputs.view(batch_size, 384, -1), 1, 2)
             
             sim_scores = torch.bmm(q_outputs, p_outputs).squeeze()
             sim_scores = sim_scores.view(batch_size, -1)
@@ -360,11 +360,17 @@ def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_da
             
             for idx, score in enumerate(sim_scores):
                 sorted_score, sorted_idx = torch.sort(score, descending=True)
-                for i in range(3):
+                for i in range(2):
                     p_inputs['input_ids'][idx] = find_word(tokenizer, p_inputs['input_ids'][idx], answers[idx], sorted_idx[i])
                 new_ids.append(p_inputs['input_ids'][idx].tolist())
     
+    origin_answers = train_dataset['answers']
+    origin_start = [data['answer_start'][0] for data in train_dataset['answers']]
     origin_text = train_dataset['context']
+    
+    for i, text in enumerate(origin_text):
+        origin_text[i] = text[:origin_start[i]] + '[ans]' + text[origin_start[i]:]
+    
     print(len(new_ids), len(origin_text), len(offset_mapping))
     
     for list_idx, offset_list in enumerate(offset_mapping):
@@ -376,19 +382,22 @@ def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_da
                     for i in range(offsets[0], offsets[1]):
                         origin_list_idx = sample_mapping[list_idx]
                         origin_text[origin_list_idx] = list(origin_text[origin_list_idx])
-                        origin_text[origin_list_idx][i] = '※'
+                        origin_text[origin_list_idx][i] = '∬'
                         origin_text[origin_list_idx] = "".join(origin_text[origin_list_idx])
     
-    for idx, origin in enumerate(origin_text):
-        origin_text[idx] = re.sub('※+',tokenizer.mask_token, origin)
     
+    for idx, origin in enumerate(origin_text):
+        origin_text[idx] = re.sub('∬+',tokenizer.mask_token, origin)
+        origin_answers[idx]['answer_start'] = [origin_text[idx].find('[ans]')]
+        origin_text[idx] = re.sub('\[ans\]','', origin_text[idx])
+        
+        
     return Dataset.from_dict({
-        'answers': train_dataset['answers'],
+        'answers': origin_answers,
         'context': origin_text,
         'id' : train_dataset['id'],
         'question': train_dataset['question'],
         'title': train_dataset['title'],
-        
     })
 ### <<< 
 
