@@ -94,7 +94,16 @@ class OutputMixin:
             {"validation": Dataset.from_pandas(df, features=features)}
         )
         return datasets
-        
+
+    def dataframe_to_dataset(
+        self,
+        df: pd.DataFrame,
+        eval_mode: bool = True,
+    ) -> Dataset:
+        features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
+        datasets = Dataset.from_pandas(df, features=features)
+        return datasets
+    
     def process_topk_context(self, contexts):
         # self.args에 들어오는 option으로 top-k 처리
         return " ".join(contexts)

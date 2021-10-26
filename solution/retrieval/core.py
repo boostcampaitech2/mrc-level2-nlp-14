@@ -5,7 +5,7 @@ from typing import List, Union, Tuple, Optional, Callable, Any
 
 from scipy.sparse.csr import csr_matrix
 import numpy as np
-import pandas as pd
+from pandas import DataFrame
 
 from datasets import Dataset
 
@@ -39,9 +39,9 @@ class SearchBase(OutputMixin):
             dict.fromkeys([v["text"] for v in corpus.values()])
         )
         print(f"Lengths of unique contexts : {len(self.contexts)}")
-        self._context_ids = list(
-            dict.fromkeys([v["document_id"] for v in corpus.values()])
-        )
+        # self._context_ids = list(
+        #     dict.fromkeys([v["document_id"] for v in corpus.values()])
+        # )
         
     @property
     def contexts(self) -> List[str]:
@@ -52,14 +52,14 @@ class SearchBase(OutputMixin):
         """
         return self._contexts
     
-    @property
-    def contexts_ids(self) -> List[int]:
-        """
-        Get corpus contexts ids(fix name convention).
-        When the object is created, contexts are read from the corpus
-        ans assigned as attribute.
-        """
-        return self._context_ids 
+    # @property
+    # def contexts_ids(self) -> List[int]:
+    #     """
+    #     Get corpus contexts ids(fix name convention).
+    #     When the object is created, contexts are read from the corpus
+    #     ans assigned as attribute.
+    #     """
+    #     return self._context_ids 
     
     @property
     def context_file_path(self) -> str:
@@ -156,8 +156,9 @@ class RetrievalBase(SearchBase, FaissMixin):
         self, 
         query_or_dataset: Union[str, Dataset], 
         topk: Optional[int] = 1,
+        eval_mode: bool = True,
         **kwargs,
-    ) -> Union[Tuple[List, List], pd.DataFrame]:
+    ) -> Union[Tuple[List, List], DataFrame]:
         """
         Retrieves the top k most similar documents from the input query
         and returns them as `DatasetDict` objects in the huggingface Datasets.
@@ -191,7 +192,7 @@ class RetrievalBase(SearchBase, FaissMixin):
         
         elif isinstance(query_or_dataset, Dataset):
             cqas = self.get_dataframe_result(query_or_dataset, doc_scores, doc_indices)
-            return self.dataframe_to_datasetdict(cqas)
+            return self.dataframe_to_dataset(cqas, eval_mode)
         
         elif isinstance(query_or_dataset, list):
             doc_contexts = [
