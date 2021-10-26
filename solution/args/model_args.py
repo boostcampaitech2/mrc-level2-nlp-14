@@ -52,6 +52,10 @@ class ModelingArguments(ModelArguments):
         default="basic",
         metadata={"help": "Which function to use to initialize the model?"},
     )
+    use_auth_token: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
     
     
 @dataclass

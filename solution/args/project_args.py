@@ -18,4 +18,7 @@ class AnalyzerArguments(ProjectArguments):
     
 @dataclass
 class MrcProjectArguments(AnalyzerArguments):
-    pass
+    checkpoint: str = field(
+        default=None,
+        metadata={"help": ""}
+    )
