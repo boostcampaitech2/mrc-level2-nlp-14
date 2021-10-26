@@ -126,7 +126,7 @@ class QuestionAnsweringTrainer(BaseTrainer):
     ) -> PredictionOutput:
         if mode.lower in ["test", "pred", "predict"]:
             mode = "predict"
-        assert mode != "predict"
+        assert mode == "predict"
         # memory metrics - must set up as early as possible
         # self._memory_tracker.start()
 
