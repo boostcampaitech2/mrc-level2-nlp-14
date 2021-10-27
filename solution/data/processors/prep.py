@@ -4,12 +4,22 @@ from solution.utils.constant import (
     ANSWER_COLUMN_NAME,
 )
 
+from .corrupt import permute_sentences
+
+DENOISE_FUNC = {
+    "sentence_permutation": permute_sentences,
+}
 
 def get_extractive_features(tokenizer, mode, data_args):
     
     def tokenize_fn(examples):
         pad_on_right = tokenizer.padding_side == "right"
         max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+
+        # denoising
+        if data_args.denoising_func:
+            examples = DENOISE_FUNC[data_args.denoising_func](examples, data_args)
+
         # truncation과 padding을 통해 tokenization을 진행
         # stride를 이용하여 overflow를 유지
         # 각 example들은 이전의 context와 조금씩 겹침

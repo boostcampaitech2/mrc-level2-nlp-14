@@ -1,9 +1,9 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/aistage-mrc/train_dataset
-  dataset_path: ./data/aistage-mrc
-  context_path: preprocess_wiki.json
+  dataset_name: ./data/v300/aistage-mrc/train_dataset
+  dataset_path: ./data/v300/aistage-mrc
+  context_path: wiki_800.json
   overwrite_cache: False
   preprocessing_num_workers: null
   
@@ -49,19 +49,23 @@ DataArguments:
   lmd_mu: 2000
   lmjm_lambda: 0.1
   
+  # DenoisingArguments
+  # denoising_func: sentence_permutation
+  permute_sentence_ratio: 1.0
+
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: klue/bert-base
+  model_name_or_path: klue/roberta-large
   reader_type: extractive
-  architectures: BertForQA
+  architectures: RobertaForQAWithConvSDSHead
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
-  model_init: basic
+  model_init: qaconv_head
   
   # ModelHeadArguments
-  model_head: conv
+  model_head: sds_conv
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
@@ -70,8 +74,8 @@ TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
-  run_name: run_test
-  output_dir: outputs/run_test
+  run_name: denoing_test_tu_origin
+  output_dir: outputs/denoing_test_tu_origin
   overwrite_output_dir: False
   learning_rate: 2e-6
   do_train: True
@@ -79,9 +83,9 @@ TrainingArguments:
   do_predict: True # eval_retrieval = True 필수
   evaluation_strategy: epoch
   save_strategy: epoch
-  per_device_train_batch_size: 32
-  per_device_eval_batch_size: 32
-  num_train_epochs: 1
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
+  num_train_epochs: 10
   # eval_steps: 100
   # save_steps: 100
   save_total_limit: 3

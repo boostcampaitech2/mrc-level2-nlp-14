@@ -197,7 +197,19 @@ class ElasticSearchArguments(RetrievalArguments):
         metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
     )
     
-    
+
 @dataclass
-class MrcDataArguments(ElasticSearchArguments):
+class DenoisingArguments(ElasticSearchArguments):
+    denoising_func: Optional[str] = field(
+        default=None,
+        metadata={"help": "[sentence_permutation,...]"}
+    )
+    permute_sentence_ratio: float = field(
+        default=1.0,
+        metadata={"help": "[0.0 ~ 1.0]"}
+    )
+
+
+@dataclass
+class MrcDataArguments(DenoisingArguments):
     pass
