@@ -146,11 +146,11 @@ def get_extractive_features(tokenizer, mode, data_args):
 
 
 def get_generative_features(tokenizer, mode, data_args):
-    
+
     def tokenize_fn(examples):
-        model_inputs = [f"question: {q} context: {c}"
+        model_inputs = [f"question: {q} context: {c} </s>"
                         for q, c in zip(examples["question"], examples["context"])]
-        labels = [f"{answer['text'][0]}" for answer in examples["answers"]]
+        labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
         output = tokenizer(
             model_inputs,
             max_length=data_args.max_seq_length,
@@ -175,10 +175,117 @@ def get_generative_features(tokenizer, mode, data_args):
     elif mode == "test":
         get_features_fn = tokenize_fn
 
-    return tokenize_fn, True
+    return get_features_fn, True
+
+
+def get_ensemble_features(tokenizer, mode, data_args):
+
+    def tokenize_fn(examples):
+        max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+        max_label_length =data_args.max_label_length
+        model_inputs = [f"question: {q} context: {c} </s>"
+                        for q, c in zip(examples["question"], examples["context"])]
+        labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
+
+        tokenized_examples = tokenizer(
+            model_inputs,
+            truncation=True,
+            max_length=max_seq_length,
+            return_offsets_mapping=True,
+            padding=False,
+        )
+        with tokenizer.as_target_tokenizer():
+            labels = tokenizer(
+                labels,
+                truncation=True,
+                max_length=max_label_length,
+                padding=False,
+            )["input_ids"]
+        tokenized_examples.update({"labels": labels})
+        tokenized_examples.update({"example_id": [e_id for e_id in examples["id"]]})
+        return tokenized_examples
+
+
+    def prepare_train_features(examples):
+        tokenized_examples = tokenize_fn(examples)
+
+        offset_mapping = tokenized_examples.pop("offset_mapping")
+
+        for i, offsets in enumerate(offset_mapping):
+            input_ids = tokenized_examples["input_ids"][i]
+            cls_index = input_ids.index(tokenizer.cls_token_id)  # cls index
+            sequence_ids = tokenized_examples.sequence_ids(i)
+            answers = examples[ANSWER_COLUMN_NAME][i]
+            context_index = 1
+
+            if len(answers["answer_start"]) == 0:
+                tokenized_examples["start_positions"].append(cls_index)
+                tokenized_examples["end_positions"].append(cls_index)
+            else:
+                start_char = answers["answer_start"][0]
+                end_char = start_char + len(answers["text"][0])
+                    
+                token_start_index = 0
+                while sequence_ids[token_start_index] != context_index:
+                    token_start_index += 1
+
+                token_end_index = len(input_ids) - 1
+                while sequence_ids[token_end_index] != context_index:
+                    token_end_index -= 1
+
+                if not (
+                    offsets[token_start_index][0] <= start_char and
+                    offsets[token_end_index][1] >= end_char
+                ):
+                    tokenized_examples["start_positions"].append(cls_index)
+                    tokenized_examples["end_positions"].append(cls_index)
+                else:
+                    while (
+                        token_start_index < len(offsets) and 
+                        offsets[token_start_index][0] <= start_char
+                    ):
+                        token_start_index += 1
+                    tokenized_examples["start_positions"].append(token_start_index - 1)
+
+                    while offsets[token_end_index][1] >= end_char:
+                        token_end_index -= 1
+                    tokenized_examples["end_positions"].append(token_end_index + 1)
+
+        return tokenized_examples
+
+    
+    def prepare_validation_features(examples):
+        tokenized_examples = tokenize_fn(examples)
+        tokenized_examples["example_id"] = []
+
+        for i in range(len(tokenized_examples["input_ids"])):
+            sequence_ids = tokenized_examples.sequence_ids(i)
+            context_index = 1
+            tokenized_examples["example_id"].append(examples["id"][i])
+            tokenized_examples["offset_mapping"][i] = [
+                (o if sequence_ids[k] == context_index else None)
+                for k, o in enumerate(tokenized_examples["offset_mapping"][i])
+            ]
+
+        return tokenized_examples
+    
+
+    def identity(examples):
+        return examples
+    
+
+    if mode == "train":
+        get_features_fn = prepare_train_features
+    elif mode == "eval":
+        get_features_fn = prepare_validation_features
+    elif mode == "test":
+        get_features_fn = prepare_validation_features
+
+    return get_features_fn, True
 
 
 PREP_PIPELINE = {
     "extractive": get_extractive_features,
     "generative": get_generative_features,
+    "ensemble" : get_ensemble_features,
 }
