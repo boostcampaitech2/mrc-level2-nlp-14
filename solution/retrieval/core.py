@@ -103,7 +103,7 @@ class RetrievalBase(SearchBase, FaissMixin):
         self.get_passage_embedding()
         
         if args.use_faiss:
-            self.build_faiss(args.data_path, args.num_clusters)
+            self.build_faiss(args.dataset_path, args.num_clusters)
     
     @property
     def p_embedding(self) -> ArrayMatrix:
