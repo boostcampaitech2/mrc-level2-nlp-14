@@ -5,8 +5,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.utils.fixes import _astype_copy_false
 from sklearn.utils.validation import FLOAT_DTYPES
 
-from solution.args import DataArguments
-from solution.retrieval.sparse.base import SparseRetrieval
+from solution.args import MrcDataArguments
+from .base import SparseRetrieval
 
 
 def _document_frequency(X):
@@ -19,7 +19,7 @@ def _document_frequency(X):
     
 class OkapiBM25Retrieval(SparseRetrieval):
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
         self.vectorizer = CountVectorizer(
             tokenizer=self.tokenize_fn,

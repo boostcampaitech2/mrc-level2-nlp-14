@@ -10,9 +10,9 @@ from transformers import AutoTokenizer
 import numpy as np
 from scipy.sparse.csr import csr_matrix
 
-from solution.args import DataArguments
+from solution.args import MrcDataArguments
 from solution.utils import timer
-from solution.retrieval.core import RetrievalBase
+from ..core import RetrievalBase
 
 
 Nested_List = List[List[int]]
@@ -32,7 +32,7 @@ class SparseRetrieval(RetrievalBase):
         calculate_scores
     """
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         super().__init__(args)
         self.name = args.retrieval_name
     
@@ -120,6 +120,7 @@ class SparseRetrieval(RetrievalBase):
             with open(vectorizer_path, "wb") as file:
                 pickle.dump(self.vectorizer, file)
             print("Embedding pickle saved.")
+            self.args.rebuilt_index = False
                 
         return self.p_embedding
     

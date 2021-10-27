@@ -5,17 +5,18 @@ from typing import List, Union, Tuple, Optional, Callable, Any
 
 from scipy.sparse.csr import csr_matrix
 import numpy as np
-import pandas as pd
-from datasets import Sequence, Value, Features, Dataset, DatasetDict
+from pandas import DataFrame
 
-from solution.args import DataArguments
-from solution.retrieval.retrieve_mixin import FaissMixin, PandasMixin
+from datasets import Dataset
+
+from .mixin import FaissMixin, OutputMixin
+from ..args import MrcDataArguments
 
 
 ArrayMatrix = Union[csr_matrix, np.ndarray]
 
 
-class SearchBase(PandasMixin):
+class SearchBase(OutputMixin):
     """
     Base class for Search Engine.
     
@@ -30,7 +31,7 @@ class SearchBase(PandasMixin):
         - dataset_path: str
     """
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         self.args = args
         with open(os.path.join(args.dataset_path, args.context_path), "r", encoding="utf-8") as f:
             corpus = json.load(f)
@@ -38,9 +39,9 @@ class SearchBase(PandasMixin):
             dict.fromkeys([v["text"] for v in corpus.values()])
         )
         print(f"Lengths of unique contexts : {len(self.contexts)}")
-        self._context_ids = list(
-            dict.fromkeys([v["document_id"] for v in corpus.values()])
-        )
+        # self._context_ids = list(
+        #     dict.fromkeys([v["document_id"] for v in corpus.values()])
+        # )
         
     @property
     def contexts(self) -> List[str]:
@@ -51,14 +52,14 @@ class SearchBase(PandasMixin):
         """
         return self._contexts
     
-    @property
-    def contexts_ids(self) -> List[int]:
-        """
-        Get corpus contexts ids(fix name convention).
-        When the object is created, contexts are read from the corpus
-        ans assigned as attribute.
-        """
-        return self._context_ids 
+    # @property
+    # def contexts_ids(self) -> List[int]:
+    #     """
+    #     Get corpus contexts ids(fix name convention).
+    #     When the object is created, contexts are read from the corpus
+    #     ans assigned as attribute.
+    #     """
+    #     return self._context_ids 
     
     @property
     def context_file_path(self) -> str:
@@ -97,7 +98,7 @@ class RetrievalBase(SearchBase, FaissMixin):
         - use_faiss: bool
     """
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         super().__init__(args)
         
         self.get_passage_embedding()
@@ -155,8 +156,9 @@ class RetrievalBase(SearchBase, FaissMixin):
         self, 
         query_or_dataset: Union[str, Dataset], 
         topk: Optional[int] = 1,
+        eval_mode: bool = True,
         **kwargs,
-    ) -> Union[Tuple[List, List], pd.DataFrame]:
+    ) -> Union[Tuple[List, List], DataFrame]:
         """
         Retrieves the top k most similar documents from the input query
         and returns them as `DatasetDict` objects in the huggingface Datasets.
@@ -171,7 +173,7 @@ class RetrievalBase(SearchBase, FaissMixin):
                     first element: document scores
                     second element: passage corresponding to scores
             otherwise:
-                pd.DataFrame
+                DatasetDict
         """
         doc_scores, doc_indices = self.get_relevant_doc(query_or_dataset,
                                                         topk=topk,
@@ -190,7 +192,15 @@ class RetrievalBase(SearchBase, FaissMixin):
         
         elif isinstance(query_or_dataset, Dataset):
             cqas = self.get_dataframe_result(query_or_dataset, doc_scores, doc_indices)
-            return cqas
+            return self.dataframe_to_dataset(cqas, eval_mode)
+        
+        elif isinstance(query_or_dataset, list):
+            doc_contexts = [
+                [self.contexts[doc_indices[i]]
+                 for i in range(topk)]
+                for doc_ind in range(len(query_or_dataset))
+            ]
+            return (doc_scores, doc_contexts)
     
     def get_relevant_doc(
         self,

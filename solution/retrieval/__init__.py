@@ -1,10 +1,15 @@
-from typing import List, Callable
-from datasets import Sequence, Value, Features, Dataset, DatasetDict
+from .core import SearchBase
+from .sparse import (
+    TfidfRetrieval,
+    OkapiBM25Retrieval,
+)
+# from .dense import *
+from .elastic_engine import ESRetrieval
 
-from solution.args import NewTrainingArguments, DataArguments
-from solution.retrieval.sparse import TfidfRetrieval, OkapiBM25Retrieval
-from solution.retrieval.dense import *
-from solution.retrieval.elastic_engine import ESRetrieval
+
+# @TODO: elastic search와 sparse, dense 사용법 통일하기
+# ElasticSearch -> build_index
+# SparseEngine -> get_passage_embeddings
 
 
 SPARSE_RETRIEVAL = {
@@ -13,49 +18,14 @@ SPARSE_RETRIEVAL = {
 }
 DENSE_RETRIEVAL = {
     "dpr": None,
+    "colbert": None,
 }
-ELASTIC_ENGINE = {"elastic_search": ESRetrieval}
+ELASTIC_ENGINE = {
+    "elastic_search": ESRetrieval,
+}
 
-RETRIEVAL_MODE = {
+RETRIEVAL_HOST = {
     "sparse": SPARSE_RETRIEVAL,
     "dense": DENSE_RETRIEVAL,
     "elastic_engine": ELASTIC_ENGINE,
 }
-
-def run_retrieval(
-    datasets: DatasetDict,
-    training_args: NewTrainingArguments,
-    data_args: DataArguments,
-):
-    retrieval_mode = RETRIEVAL_MODE[data_args.retrieval_mode]
-    retriever = retrieval_mode[data_args.retrieval_name](data_args)
-    df = retriever.retrieve(datasets["validation"],
-                            topk=data_args.top_k_retrieval)
-    if training_args.do_predict:
-        f = Features(
-            {
-                "context": Value(dtype="string", id=None),
-                "id": Value(dtype="string", id=None),
-                "question": Value(dtype="string", id=None),
-            }
-        )
-    elif training_args.do_eval:
-        f = Features(
-            {
-                "answers": Sequence(
-                    feature={
-                        "text": Value(dtype="string", id=None),
-                        "answer_start": Value(dtype="int32", id=None),
-                    },
-                    length=-1,
-                    id=None,
-                ),
-                "context": Value(dtype="string", id=None),
-                "id": Value(dtype="string", id=None),
-                "question": Value(dtype="string", id=None),
-            }
-        )
-    datasets = DatasetDict(
-        {"validation": Dataset.from_pandas(df, features=f)}
-    )
-    return datasets

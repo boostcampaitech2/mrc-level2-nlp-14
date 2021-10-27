@@ -1,1 +1,1 @@
-from solution.retrieval.elastic_engine.api import ESRetrieval
+from .api import ESRetrieval

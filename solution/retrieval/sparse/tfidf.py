@@ -1,12 +1,12 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from solution.args import DataArguments
-from solution.retrieval.sparse.base import SparseRetrieval
+from solution.args import MrcDataArguments
+from .base import SparseRetrieval
 
 
 class TfidfRetrieval(SparseRetrieval):
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
         self.vectorizer = TfidfVectorizer(
             tokenizer=self.tokenize_fn,

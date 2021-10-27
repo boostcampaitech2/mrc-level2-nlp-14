@@ -1,17 +1,17 @@
 from datasets import Dataset
 from elasticsearch import Elasticsearch, helpers
 
-from solution.args import DataArguments
-from solution.retrieval.elastic_engine.base import ElasticSearchBase
+from solution.args import MrcDataArguments
+from .base import ElasticSearchBase
 
 
 class ESRetrieval(ElasticSearchBase):
     
-    def __init__(self, args: DataArguments):
+    def __init__(self, args: MrcDataArguments):
         es = Elasticsearch(args.es_host_address)
         super().__init__(args, es)
         
-    def retrieve(self, query_or_dataset, topk=1):
+    def retrieve(self, query_or_dataset, topk=1, eval_mode=True):
         doc_scores, doc_indices, doc_contexts = self.get_relevant_doc(query_or_dataset, topk)
         if isinstance(query_or_dataset, str):
             doc_scores = doc_scores[0]
@@ -30,7 +30,47 @@ class ESRetrieval(ElasticSearchBase):
                                              doc_indices,
                                              doc_contexts,
                                             )
-            return cqas
+            return self.dataframe_to_dataset(cqas, eval_mode)
         
         elif isinstance(query_or_dataset, list):
             return (doc_scores, doc_contexts)
+        
+    def get(self, id):
+        doc = self.engine.get(index=self.index_name, id=id)
+        return doc["_source"]["document_text"]
+    
+    @property
+    def count(self):
+        return self.engine.count(index=self.index_name)["count"]
+    
+    def analyze(self, query):
+        body = {"analyzer": "my_analyzer", "text": query}
+        return self.engine.indices.analyze(index=self.index_name, body=body)
+    
+    def make_query(self, query, topk):
+        return {"query": {"match": {"document_text": query}}, "size": topk}
+    
+    def get_relevant_doc(self, query_or_dataset, topk):
+        if isinstance(query_or_dataset, Dataset):
+            query = query_or_dataset["question"]
+        elif isinstance(query_or_dataset, str):
+            query = [query_or_dataset]
+        elif isinstance(query_or_dataset, list):
+            query = query_or_dataset
+        else:
+            raise NotImplementedError
+        
+        body = []
+        for i in range(len(query)*2):
+            if i % 2 == 0:
+                body.append({"index": self.index_name})
+            else:
+                body.append(self.make_query(query[i//2], topk))
+
+        response = self.engine.msearch(body=body)["responses"]
+        
+        doc_scores = [[hit["_score"] for hit in res["hits"]["hits"]] for res in response]
+        doc_indices = [[hit["_id"] for hit in res["hits"]["hits"]] for res in response]
+        doc_contexts = [[hit["_source"]["document_text"] for hit in res["hits"]["hits"]] for res in response]
+        
+        return doc_scores, doc_indices, doc_contexts
