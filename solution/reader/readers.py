@@ -1,0 +1,42 @@
+from transformers import PreTrainedModel
+
+from .core import ReaderBase
+from .architectures import (
+    AutoModelForQuestionAnswering,
+    AutoModelForSeq2SeqLM,
+)
+from .trainers import (
+    BaseTrainer,
+    QuestionAnsweringTrainer,
+    QuestionAnsweringSeq2SeqTrainer
+)
+
+
+class ExtractiveReader(ReaderBase):
+    reader_type: str = "extractive"
+    default_model: PreTrainedModel = AutoModelForQuestionAnswering
+    default_trainer: BaseTrainer = QuestionAnsweringTrainer
+
+
+class GenerativeReader(ReaderBase):
+    reader_type: str = "generative"
+    default_model: PreTrainedModel = AutoModelForSeq2SeqLM
+    default_trainer: BaseTrainer = QuestionAnsweringSeq2SeqTrainer
+
+
+class UnderlineReader(ReaderBase):
+    reader_type: str = "underline"
+    default_model: PreTrainedModel = None
+    default_trainer: BaseTrainer = None
+
+
+class EnsembleReader(ReaderBase):
+    reader_type: str = "ensemble"
+    default_model: PreTrainedModel = None
+    default_trainer: BaseTrainer = None
+
+
+class RetroReader(ReaderBase):
+    reader_type: str = "retrospective"
+    default_model: PreTrainedModel = None
+    default_trainer: BaseTrainer = None
