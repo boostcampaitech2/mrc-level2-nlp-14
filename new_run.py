@@ -23,7 +23,10 @@ from solution.utils import (
     compute_metrics,
     post_processing_function,
     ext_prepare_features,
-    gen_prepare_features
+    gen_prepare_features,
+    get_masked_dataset,
+    make_question_random_masking,
+    make_emb_mask_dataset,
 )
 
 

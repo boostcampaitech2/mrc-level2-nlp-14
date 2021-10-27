@@ -174,7 +174,7 @@ class ReaderBase():
         # dataset을 전처리합니다.
         # training과 evaluation에서 사용되는 전처리는 아주 조금 다른 형태를 가집니다.
         if self.training_args.do_train:
-            column_names = self.datasets["train"].column_names
+            column_names = self.datasets["train_mask"].column_names
         else:
             column_names = self.datasets["validation"].column_names
 
@@ -186,7 +186,7 @@ class ReaderBase():
         if self.training_args.do_train:
             if "train" not in self.datasets:
                 raise ValueError("--do_train requires a train dataset")
-            self.train_dataset = self.datasets["train"]
+            self.train_dataset = self.datasets["train_mask"]
 
             # dataset에서 train feature를 생성합니다.
             self.train_dataset = self.train_dataset.map(
