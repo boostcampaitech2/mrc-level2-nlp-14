@@ -13,10 +13,6 @@ DATA ARGS의 항목이 너무 많아서 지저분하다.
 @dataclass
 class DataPathArguments(DataArguments):
     """ Arguments related to data. """
-    dataset_name: str = field(
-        default="./data/aistage-mrc/train_dataset", 
-        metadata={"help": "The name of the dataset to use."},
-    )
     dataset_path: str = field(
         default="./data/aistage-mrc",
         metadata={"help": "The path of the dataset stored"},
@@ -33,7 +29,14 @@ class DataPathArguments(DataArguments):
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
-
+    curriculum_learn: bool = field(
+        default=False,
+        metadata={"help": "Use curriculum learning method"},
+    )
+    curriculum_split_name: Optional[str] = field(
+        default="./data/aistage-mrc/train_dataset", 
+        metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
+    )
     
 @dataclass
 class TokenizerArguments(DataPathArguments):
