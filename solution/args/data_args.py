@@ -33,6 +33,10 @@ class DataPathArguments(DataArguments):
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
+    dataset_version: str = field(
+        default="v1.0.0",
+        metadata={"help": "Dataset version"},
+    )
 
     
 @dataclass
