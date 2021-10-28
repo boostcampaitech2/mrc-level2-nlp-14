@@ -8,7 +8,7 @@ from .base import ElasticSearchBase
 class ESRetrieval(ElasticSearchBase):
     
     def __init__(self, args: DataArguments):
-        es = Elasticsearch(args.es_host_address
+        es = Elasticsearch(args.es_host_address,
                            timeout=args.es_timeout,
                            max_retries=args.es_max_retries,
                            retry_on_timeout=args.es_retry_on_timeout)
