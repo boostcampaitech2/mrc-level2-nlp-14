@@ -1,14 +1,17 @@
 from datasets import Dataset
 from elasticsearch import Elasticsearch, helpers
 
-from solution.args import MrcDataArguments
+from solution.args import DataArguments
 from .base import ElasticSearchBase
 
 
 class ESRetrieval(ElasticSearchBase):
     
-    def __init__(self, args: MrcDataArguments):
-        es = Elasticsearch(args.es_host_address)
+    def __init__(self, args: DataArguments):
+        es = Elasticsearch(args.es_host_address
+                           timeout=args.es_timeout,
+                           max_retries=args.es_max_retries,
+                           retry_on_timeout=args.es_retry_on_timeout)
         super().__init__(args, es)
         
     def retrieve(self, query_or_dataset, topk=1, eval_mode=True):

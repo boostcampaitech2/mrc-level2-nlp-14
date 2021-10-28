@@ -136,6 +136,18 @@ class ElasticSearchArguments(RetrievalArguments):
         default="localhost:9200",
         metadata={"help": ""}
     )
+    es_timeout: int = field(
+        default=30,
+        metadata={"help": ""}
+    )
+    es_max_retries: int = field(
+        default=10,
+        metadata={"help": ""}
+    )
+    es_retry_on_timeout: bool = field(
+        default=True,
+        metadata={"help": ""}
+    )
     es_similarity: str = field(
         default="bm25_similarity",
         metadata={"help": ""}
