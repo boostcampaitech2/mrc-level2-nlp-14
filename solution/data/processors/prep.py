@@ -16,10 +16,6 @@ def get_extractive_features(tokenizer, mode, data_args):
         pad_on_right = tokenizer.padding_side == "right"
         max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
 
-        # denoising
-        if data_args.denoising_func:
-            examples = DENOISE_FUNC[data_args.denoising_func](examples, data_args)
-
         # truncation과 padding을 통해 tokenization을 진행
         # stride를 이용하여 overflow를 유지
         # 각 example들은 이전의 context와 조금씩 겹침
@@ -44,6 +40,10 @@ def get_extractive_features(tokenizer, mode, data_args):
 
     def prepare_train_features(examples):
         pad_on_right = tokenizer.padding_side == "right"
+        # denoising
+        if data_args.denoising_func:
+            examples = DENOISE_FUNC[data_args.denoising_func](examples, data_args)
+            
         tokenized_examples = tokenize_fn(examples)
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")

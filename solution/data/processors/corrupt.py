@@ -11,10 +11,10 @@ def permute_sentences(examples, data_args, p=1.0):
     ids = []
     question = []
     title = []
-    is_batch = type(examples['context']) == str
+    no_batch = type(examples['context']) == str
 
     # 입력이 배치 단위가 아닌 경우
-    if is_batch == True:
+    if no_batch == True:
         sentence_list = examples['context'].split('#')
         result = sentence_list.copy()
 

@@ -50,7 +50,7 @@ DataArguments:
   lmjm_lambda: 0.1
   
   # DenoisingArguments
-  # denoising_func: sentence_permutation
+  denoising_func: sentence_permutation
   permute_sentence_ratio: 1.0
 
 ModelArguments:
@@ -76,7 +76,7 @@ TrainingArguments:
   report_to: wandb
   run_name: denoing_test_tu_origin
   output_dir: outputs/denoing_test_tu_origin
-  overwrite_output_dir: False
+  overwrite_output_dir: True
   learning_rate: 2e-6
   do_train: True
   do_eval: True
