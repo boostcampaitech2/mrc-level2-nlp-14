@@ -22,7 +22,7 @@ class BartForQuestionAnswering(QA):
     def __init__(self, config):
         super().__init__(config)
         assert config.reader_type == self.reader_type
-        
+
         
 class BartForConditionalGeneration(CG):
     reader_type: str = "generative"
@@ -56,6 +56,8 @@ class BartForQAWithConvSDSHead(QA):
 
 class BartForExtractionGenerationEnsemble(BartPretrainedModel):
     reader_type: str = "ensemble"
+    base_model_prefix = "model"
+    _keys_to_ignore_on_load_missing = [r"final_logits_bias", r"lm_head\.weight"]
 
     def __init__(self, config):
         super().__init__(config)
@@ -144,11 +146,11 @@ class BartForExtractionGenerationEnsemble(BartPretrainedModel):
             decoder_inputs_embeds=decoder_inputs_embeds,
             use_cache=use_cache,
             output_attentions=output_attentions,
-            output_hidden_states=output_hidden_states,
+            output_hidden_states=True,
             return_dict=return_dict,
         )
 
-        sequence_output = outputs[0]
+        sequence_output = outputs.encoder_last_hidden_state
 
         logits = self.qa_outputs(sequence_output)
         start_logits, end_logits = logits.split(1, dim=-1)
@@ -172,7 +174,7 @@ class BartForExtractionGenerationEnsemble(BartPretrainedModel):
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
-        lm_logits = self.lm_head(outputs[0]) + self.final_logits_bias
+        lm_logits = self.lm_head(outputs.last_hidden_state) + self.final_logits_bias
 
         masked_lm_loss = None
         if labels is not None:
@@ -187,8 +189,12 @@ class BartForExtractionGenerationEnsemble(BartPretrainedModel):
             gen_output = (lm_logits,) + outputs[1:]
             return ((total_loss + masked_lm_loss,) + ext_output + gen_output) if total_loss is not None and masked_lm_loss is not None else ext_output + gen_output
 
+        loss = None
+        if total_loss is not None and masked_lm_loss is not None:
+            loss = total_loss + masked_lm_loss
+
         return Seq2SeqEnsembleModelOutput(
-            loss=total_loss + masked_lm_loss,
+            loss=loss,
             logits=lm_logits,
             start_logits=start_logits,
             end_logits=end_logits,
@@ -200,6 +206,47 @@ class BartForExtractionGenerationEnsemble(BartPretrainedModel):
             encoder_hidden_states=outputs.encoder_hidden_states,
             encoder_attentions=outputs.encoder_attentions,
         )
+
+    def prepare_inputs_for_generation(
+        self,
+        decoder_input_ids,
+        past=None,
+        attention_mask=None,
+        head_mask=None,
+        decoder_head_mask=None,
+        cross_attn_head_mask=None,
+        use_cache=None,
+        encoder_outputs=None,
+        **kwargs
+    ):
+        # cut decoder_input_ids if past is used
+        if past is not None:
+            decoder_input_ids = decoder_input_ids[:, -1:]
+
+        return {
+            "input_ids": None,  # encoder_outputs is defined. input_ids not needed
+            "encoder_outputs": encoder_outputs,
+            "past_key_values": past,
+            "decoder_input_ids": decoder_input_ids,
+            "attention_mask": attention_mask,
+            "head_mask": head_mask,
+            "decoder_head_mask": decoder_head_mask,
+            "cross_attn_head_mask": cross_attn_head_mask,
+            "use_cache": use_cache,  # change this to avoid caching (presumably for debugging)
+        }
+
+    def prepare_decoder_input_ids_from_labels(self, labels: torch.Tensor):
+        return shift_tokens_right(labels, self.config.pad_token_id, self.config.decoder_start_token_id)
+
+    @staticmethod
+    def _reorder_cache(past, beam_idx):
+        reordered_past = ()
+        for layer_past in past:
+            # cached cross_attention states don't have to be reordered -> they are always the same
+            reordered_past += (
+                tuple(past_state.index_select(0, beam_idx) for past_state in layer_past[:2]) + layer_past[2:],
+            )
+        return reordered_past
 
 @dataclass
 class Seq2SeqEnsembleModelOutput(ModelOutput):
