@@ -55,11 +55,13 @@ def convert_examples_to_features(
     )
 
     if ('v3' in processor.data_args.dataset_version) & (retriever is None) & (mode != "test"):
-        dataset = dataset.map(remove_special_token,
-                    batched=is_batched,
-                    num_proc=processor.data_args.preprocessing_num_workers,
-                    load_from_cache_file=not processor.data_args.overwrite_cache,)
-    
+        dataset = dataset.map(
+            remove_special_token,
+            batched=is_batched,
+            num_proc=processor.data_args.preprocessing_num_workers,
+            load_from_cache_file=not processor.data_args.overwrite_cache,
+        )
+            
     return features, dataset
     
     
