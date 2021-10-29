@@ -8,7 +8,8 @@ from .architectures import (
 from .trainers import (
     BaseTrainer,
     QuestionAnsweringTrainer,
-    QuestionAnsweringSeq2SeqTrainer
+    QuestionAnsweringSeq2SeqTrainer,
+    QuestionAnsweringEnsembleTrainer,
 )
 
 
@@ -32,8 +33,8 @@ class UnderlineReader(ReaderBase):
 
 class EnsembleReader(ReaderBase):
     reader_type: str = "ensemble"
-    default_model: PreTrainedModel = None
-    default_trainer: BaseTrainer = None
+    default_model: PreTrainedModel = AutoModelForSeq2SeqLM
+    default_trainer: BaseTrainer = QuestionAnsweringEnsembleTrainer
 
 
 class RetroReader(ReaderBase):
