@@ -59,8 +59,8 @@ class ReaderBase:
                 params.update({key: kwargs.get(key)})
             else:
                 raise AttributeError
-        assert (params.get("tokenizer", None) is None or
-                params.get("data_collator", None) is None)
+        #assert (params.get("tokenizer", None) is None or
+        #        params.get("data_collator", None) is None)
         self._trainer = self.default_trainer(**params)
         
     @property
