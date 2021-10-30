@@ -57,7 +57,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
         self.sep_token_id = config.sep_token_id
         self.num_labels = config.num_labels
         
-        self.roberta = RobertaModel(config)
+        self.roberta = RobertaModel(config, add_pooling_layer=False)
         if config.model_head == "conv":
             head_cls = QAConvHead
         else:
@@ -72,7 +72,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
             sep_idx = np.where(input_id.cpu().numpy() == self.sep_token_id)
             token_type_id = [0]*sep_idx[0][0] + [1]*(len(input_id)-sep_idx[0][0])
             token_type_ids.append(token_type_id)
-        return torch.LongTensor(token_type_ids, device=input_ids.device)
+        return torch.LongTensor(token_type_ids).to(input_ids.device)
         
     def forward(
         self,
@@ -103,7 +103,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
         )
 
         sequence_output = outputs[0]
-
+        
         token_type_ids = self.make_token_type_ids(input_ids)
         logits = self.qa_outputs(sequence_output, token_type_ids)
         start_logits, end_logits = logits.split(1, dim=-1)
