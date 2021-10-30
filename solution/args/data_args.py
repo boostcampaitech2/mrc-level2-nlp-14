@@ -37,6 +37,14 @@ class DataPathArguments(DataArguments):
         default="v1.0.0",
         metadata={"help": "Dataset version"},
     )
+    curriculum_learn: bool = field(
+        default=False,
+        metadata={"help": "Use curriculum learning method"},
+    )
+    curriculum_split_name: Optional[str] = field(
+        default="./data/aistage-mrc/train_dataset", 
+        metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
+    )
 
     
 @dataclass
@@ -138,6 +146,18 @@ class ElasticSearchArguments(RetrievalArguments):
     )
     es_host_address: str = field(
         default="localhost:9200",
+        metadata={"help": ""}
+    )
+    es_timeout: int = field(
+        default=30,
+        metadata={"help": ""}
+    )
+    es_max_retries: int = field(
+        default=10,
+        metadata={"help": ""}
+    )
+    es_retry_on_timeout: bool = field(
+        default=True,
         metadata={"help": ""}
     )
     es_similarity: str = field(
