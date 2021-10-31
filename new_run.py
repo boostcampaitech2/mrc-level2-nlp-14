@@ -102,41 +102,45 @@ def main():
             checkpoint = model_args.model_name_or_path
     logger.warning(f"CHECKPOINT: {checkpoint}")
 
-    with reader.mode_change(mode="train"):
-        train_results = reader.read(resume_from_checkpoint=checkpoint)
-        reader.save_trainer()
-        reader.save_metrics("train", 
-                            train_results.metrics, 
-                            train_datasets)
-        checkpoint = training_args.output_dir
+    if training_args.do_train:
+        with reader.mode_change(mode="train"):
+            train_results = reader.read(resume_from_checkpoint=checkpoint)
+            reader.save_trainer()
+            reader.save_metrics("train", 
+                                train_results.metrics, 
+                                train_datasets)
+            checkpoint = training_args.output_dir
+
+    if training_args.do_eval:
+        if data_args.eval_retrieval:
+            eval_features, eval_datasets = convert_examples_to_features(
+                processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="eval")
+    
+    
+        logger.warning(f"load from checkpoint {checkpoint}")
+        ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
+        state_dict = torch.load(ckpt_model_file, map_location="cpu")
+        reader._trainer._load_state_dict_in_model(state_dict)
+        del state_dict
+        torch.cuda.empty_cache()
         
-    eval_features, eval_datasets = convert_examples_to_features(
-        processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="eval")
+        with reader.mode_change(mode="evaluate"):
+            eval_metrics = reader.read(eval_dataset=eval_features,
+                                    eval_examples=eval_datasets,
+                                    mode=reader.mode)
+            reader.save_metrics("eval",
+                                eval_metrics,
+                                eval_datasets)
+
+    if training_args.do_predict & data_args.eval_retrieval:
+        test_features, test_datasets = convert_examples_to_features(
+            processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="test")
     
-    
-    logger.warning(f"load from checkpoint {checkpoint}")
-    ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
-    state_dict = torch.load(ckpt_model_file, map_location="cpu")
-    reader._trainer._load_state_dict_in_model(state_dict)
-    del state_dict
-    torch.cuda.empty_cache()
-    
-    with reader.mode_change(mode="evaluate"):
-        eval_metrics = reader.read(eval_dataset=eval_features,
-                                   eval_examples=eval_datasets,
-                                   mode=reader.mode)
-        reader.save_metrics("eval",
-                            eval_metrics,
-                            eval_datasets)
-    
-    test_features, test_datasets = convert_examples_to_features(
-        processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="test")
-    
-    with reader.mode_change(mode="predict"):
-        pred_results = reader.read(test_dataset=test_features,
-                                   test_examples=test_datasets,
-                                   mode=reader.mode)
-        
+        with reader.mode_change(mode="predict"):
+            pred_results = reader.read(test_dataset=test_features,
+                                    test_examples=test_datasets,
+                                    mode=reader.mode)
+
     # 오답노트 기능을 사용할 경우 Analyzer로 분석
     # if project_args.report_to_wrong_answers:
     #     report = Analyzer.make_report(eval_result)
