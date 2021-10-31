@@ -102,6 +102,16 @@ def main():
             checkpoint = model_args.model_name_or_path
     logger.warning(f"CHECKPOINT: {checkpoint}")
 
+    # curriculum learning setting
+    if data_args.curriculum_learn:
+        logger.warning(f"load from checkpoint {checkpoint}")
+        ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
+        state_dict = torch.load(ckpt_model_file, map_location="cpu")
+        reader._trainer._load_state_dict_in_model(state_dict)
+        del state_dict
+        torch.cuda.empty_cache()
+        checkpoint = None
+
     if training_args.do_train:
         with reader.mode_change(mode="train"):
             train_results = reader.read(resume_from_checkpoint=checkpoint)
@@ -115,7 +125,6 @@ def main():
         if data_args.eval_retrieval:
             eval_features, eval_datasets = convert_examples_to_features(
                 processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="eval")
-    
     
         logger.warning(f"load from checkpoint {checkpoint}")
         ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
