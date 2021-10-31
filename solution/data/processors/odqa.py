@@ -24,7 +24,7 @@ def convert_examples_to_features(
 ):
     if mode == "test" and retriever is None:
         raise AttributeError
-    
+
     if mode == "train":
         dataset: Dataset = processor.get_train_examples()
     elif mode == "eval":
@@ -33,17 +33,17 @@ def convert_examples_to_features(
         dataset: Dataset = processor.get_test_examples()
     else:
         raise NotImplemented
-        
+
     logger.info(f"[{mode.upper()}] convert examples to features")
-    
+
     prep_pipeline = PREP_PIPELINE[processor.model_args.reader_type]
-    
+
     prep_fn, is_batched = prep_pipeline(tokenizer, mode, processor.data_args)
-    
+
     if retriever is not None:
         eval_mode = mode == "eval"
         dataset = retriever.retrieve(dataset, topk=topk, eval_mode=eval_mode)
-        
+
     features = dataset.map(
         prep_fn,
         batched=is_batched,
@@ -51,12 +51,11 @@ def convert_examples_to_features(
         remove_columns=dataset.column_names,
         load_from_cache_file=not processor.data_args.overwrite_cache,
     )
-    
+
     return features, dataset
-    
-    
+
+
 class OdqaProcessor(DataProcessor):
-    
     def get_train_examples(self):
         dataset_path = self.data_args.dataset_path
         if self.data_args.curriculum_learn:
@@ -64,13 +63,14 @@ class OdqaProcessor(DataProcessor):
         else:
             input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["train"]
         return input_data
-    
+
     def get_eval_examples(self):
         dataset_path = self.data_args.dataset_path
         input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["validation"]
         return input_data
-    
+
     def get_test_examples(self):
         dataset_path = self.data_args.dataset_path
         input_data = load_from_disk(os.path.join(dataset_path, "test_dataset"))["validation"]
         return input_data
+        
