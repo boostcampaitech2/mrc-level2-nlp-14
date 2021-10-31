@@ -3,6 +3,7 @@ from solution.utils.constant import (
     CONTEXT_COLUMN_NAME,
     ANSWER_COLUMN_NAME,
 )
+import torch
 
 
 def get_extractive_features(tokenizer, mode, data_args):
@@ -32,9 +33,26 @@ def get_extractive_features(tokenizer, mode, data_args):
         )
         return tokenized_examples
 
+     def get_underline_embedding(tokenized_examples):
+        underline_ids = torch.zeros_like(tokenized_examples['input_ids'])
+        punct_start_token = '^'
+        punct_end_token = '※'
+        punct_start_id = tokenizer.convert_tokens_to_ids(punct_start_token)
+        punct_end_id = tokenizer.convert_tokens_to_ids(punct_end_token)
+        for i in range(len(tokenized_examples['input_ids'])):
+            punct_start = torch.nonzero(tokenized_examples['input_ids'][i] == punct_start_id)
+            punct_end = torch.nonzero(tokenized_examples['input_ids'][i] == punct_end_id)
+            underline_ids[i][punct_start[0]+1:punct_end[0]] = 1
+        tokenized_examples.update({"underline_ids": underline_ids})
+
+        return tokenized_examples
+
     def prepare_train_features(examples):
         pad_on_right = tokenizer.padding_side == "right"
         tokenized_examples = tokenize_fn(examples)
+        if data_args.underline == 'underline':
+            tokenized_examples = get_underline_embedding(tokenized_examples)
+
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
         offset_mapping = tokenized_examples.pop("offset_mapping")

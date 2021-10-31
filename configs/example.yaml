@@ -13,6 +13,7 @@ DataArguments:
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
+  underline: True
   
   # RetrievalArguments
   retrieval_mode: elastic_engine
@@ -52,9 +53,10 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: klue/bert-base
+  # model_name_or_path: klue/bert-base
+  model_name_or_path: kiyoung2/roberta-large-qa
   reader_type: extractive
-  architectures: BertForQA
+  architectures: RobertaForQAWithUnderline
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
@@ -70,7 +72,7 @@ TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
-  run_name: run_test
+  run_name: train_punc_underline
   output_dir: outputs/run_test
   overwrite_output_dir: False
   learning_rate: 2e-6
@@ -81,7 +83,7 @@ TrainingArguments:
   save_strategy: epoch
   per_device_train_batch_size: 32
   per_device_eval_batch_size: 32
-  num_train_epochs: 1
+  num_train_epochs: 10
   # eval_steps: 100
   # save_steps: 100
   save_total_limit: 3

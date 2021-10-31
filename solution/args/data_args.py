@@ -62,6 +62,10 @@ class TokenizerArguments(DataPathArguments):
         default=False,
         metadata={"help": ""}
     )
+    underline: bool = field(
+        default=False,
+        metadata={"help": "Whether to add underline embedding at the time of tokenizing or not"},
+    )
    
     
 @dataclass

@@ -123,7 +123,7 @@ def main():
         eval_metrics = reader.read(eval_dataset=eval_features,
                                    eval_examples=eval_datasets,
                                    mode=reader.mode)
-        reader.save_metrics("eval",git s
+        reader.save_metrics("eval",
                             eval_metrics,
                             eval_datasets)
     
