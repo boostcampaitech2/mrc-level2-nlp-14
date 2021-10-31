@@ -1,15 +1,16 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/aistage-mrc/train_dataset
-  dataset_path: ./data/aistage-mrc
-  context_path: preprocess_wiki.json
-  overwrite_cache: False
+  dataset_name: ./data/v300/aistage-mrc/train_dataset
+  dataset_path: ./data/v300/aistage-mrc
+  context_path: wiki_800.json
+  overwrite_cache: True
   preprocessing_num_workers: null
+  dataset_version: v3.0.0
   
   # TokenizerArguments
   max_seq_length: 384
-  pad_to_max_length: False
+  pad_to_max_length: True
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
@@ -18,7 +19,7 @@ DataArguments:
   # RetrievalArguments
   retrieval_mode: elastic_engine
   retrieval_name: elastic_search
-  rebuilt_index: False
+  rebuilt_index: True
   retrieval_tokenizer_name: mecab
   sp_max_features: 50000
   sp_ngram_range: [1,2]
@@ -50,6 +51,10 @@ DataArguments:
   lmd_mu: 2000
   lmjm_lambda: 0.1
   
+  # DenoisingArguments
+  # denoising_func: sentence_permutation
+  permute_sentence_ratio: 1.0
+
 ModelArguments:
 
   # ModelArguments
@@ -60,10 +65,10 @@ ModelArguments:
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
-  model_init: basic
+  model_init: qaconv_head
   
   # ModelHeadArguments
-  model_head: conv
+  model_head: sds_conv
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5

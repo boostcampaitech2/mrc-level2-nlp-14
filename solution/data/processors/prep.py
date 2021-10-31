@@ -3,14 +3,55 @@ from solution.utils.constant import (
     CONTEXT_COLUMN_NAME,
     ANSWER_COLUMN_NAME,
 )
+
 import torch
 
+from .corrupt import permute_sentences
+import re
+
+DENOISE_FUNC = {
+    "sentence_permutation": permute_sentences,
+}
+
+def remove_special_token(examples):
+    answers = []
+    context = []
+    document_id = []
+    ids = []
+    question = []
+    title = []
+
+    for i in range(len(examples['context'])):    
+        sentence_list = examples['context'][i].split('#')
+        result = sentence_list.copy()
+
+        result = ' '.join(sentence_list)
+        index = result.find('[ANSWER]')
+        result = re.sub('\[ANSWER\]','',result)
+
+        answer = examples['answers'][i]
+        answer['answer_start'][0] = index
+
+        answers.append(answer)
+        context.append(result)
+        document_id.append(examples['document_id'][i])
+        ids.append(examples['id'][i])
+        question.append(examples['question'][i])
+        title.append(examples['title'][i])
+
+    return {'answers': answers,
+            'context': context,
+            'document_id': document_id,
+            'id': ids,
+            'question': question,
+            'title': title}
 
 def get_extractive_features(tokenizer, mode, data_args):
     
     def tokenize_fn(examples):
         pad_on_right = tokenizer.padding_side == "right"
         max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+
         # truncation과 padding을 통해 tokenization을 진행
         # stride를 이용하여 overflow를 유지
         # 각 example들은 이전의 context와 조금씩 겹침
@@ -33,7 +74,7 @@ def get_extractive_features(tokenizer, mode, data_args):
         )
         return tokenized_examples
 
-     def get_underline_embedding(tokenized_examples):
+    def get_underline_embedding(tokenized_examples):
         underline_ids = torch.zeros_like(tokenized_examples['input_ids'])
         punct_start_token = '^'
         punct_end_token = '※'
@@ -47,8 +88,48 @@ def get_extractive_features(tokenizer, mode, data_args):
 
         return tokenized_examples
 
+    def remove_special_token(examples):
+        answers = []
+        context = []
+        document_id = []
+        ids = []
+        question = []
+        title = []
+
+        for i in range(len(examples['context'])):    
+            sentence_list = examples['context'][i].split('#')
+            result = sentence_list.copy()
+
+            result = ' '.join(sentence_list)
+            index = result.find('[ANSWER]')
+            result = re.sub('\[ANSWER\]','',result)
+
+            answer = examples['answers'][i]
+            answer['answer_start'][0] = index
+
+            answers.append(answer)
+            context.append(result)
+            document_id.append(examples['document_id'][i])
+            ids.append(examples['id'][i])
+            question.append(examples['question'][i])
+            title.append(examples['title'][i])
+
+        return {'answers': answers,
+                'context': context,
+                'document_id': document_id,
+                'id': ids,
+                'question': question,
+                'title': title}
+
     def prepare_train_features(examples):
         pad_on_right = tokenizer.padding_side == "right"
+        # denoising
+        if 'v3' in data_args.dataset_version:
+            if data_args.denoising_func:
+                examples = DENOISE_FUNC[data_args.denoising_func](examples, data_args)
+            else:
+                examples = remove_special_token(examples)
+
         tokenized_examples = tokenize_fn(examples)
         if data_args.underline == 'underline':
             tokenized_examples = get_underline_embedding(tokenized_examples)
@@ -124,8 +205,12 @@ def get_extractive_features(tokenizer, mode, data_args):
 
         return tokenized_examples
     
-    def prepare_validation_features(examples):
+    def prepare_validation_features(examples, retriever=None):
         pad_on_right = tokenizer.padding_side == "right"
+
+        if ('v3' in data_args.dataset_version) & (retriever is None):
+            examples = remove_special_token(examples)
+
         tokenized_examples = tokenize_fn(examples)
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
