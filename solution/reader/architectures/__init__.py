@@ -39,6 +39,7 @@ def _get_model(
         model_args.model_name_or_path,
         config=config,
         use_auth_token=model_args.use_auth_token,
+        # revision="v2.0.1",
     )
     return model    
 

@@ -69,15 +69,15 @@ class OdqaProcessor(DataProcessor):
     
     def get_train_examples(self):
         dataset_path = self.data_args.dataset_path
-        if self.data_args.curriculum_learning:
-            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))[self.data_args.curriculum_split_name]
+        if self.data_args.curriculum_learn:
+            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset_aug"))["train"]
         else:
-            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["train_date_mask"]
+            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset_aug"))["train"]
         return input_data
     
     def get_eval_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["validation"]
+        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset_aug"))["validation"]
         return input_data
     
     def get_test_examples(self):

@@ -103,7 +103,7 @@ def main():
             checkpoint = model_args.model_name_or_path
     logger.warning(f"CHECKPOINT: {checkpoint}")
 
-    if data_args.curriculum_learning and checkpoint is not None:
+    if data_args.curriculum_learn and checkpoint is not None:
         logger.warning(f"load from checkpoint {checkpoint}")
         ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
         state_dict = torch.load(ckpt_model_file, map_location="cpu")
