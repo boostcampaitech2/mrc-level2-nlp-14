@@ -29,6 +29,10 @@ class DataPathArguments(DataArguments):
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
+    dataset_version: str = field(
+        default="v1.0.0",
+        metadata={"help": "Dataset version"},
+    )
     curriculum_learn: bool = field(
         default=False,
         metadata={"help": "Use curriculum learning method"},
@@ -212,7 +216,19 @@ class ElasticSearchArguments(RetrievalArguments):
         metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
     )
     
-    
+
 @dataclass
-class MrcDataArguments(ElasticSearchArguments):
+class DenoisingArguments(ElasticSearchArguments):
+    denoising_func: Optional[str] = field(
+        default=None,
+        metadata={"help": "[sentence_permutation,...]"}
+    )
+    permute_sentence_ratio: float = field(
+        default=1.0,
+        metadata={"help": "[0.0 ~ 1.0]"}
+    )
+
+
+@dataclass
+class MrcDataArguments(DenoisingArguments):
     pass
