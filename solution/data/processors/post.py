@@ -16,7 +16,7 @@
 import collections
 import json
 import os
-import re
+from collections import Counter
 from typing import Optional, Tuple
 
 import numpy as np
@@ -93,53 +93,96 @@ def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
             ref_text_reverse.pop()
             ref_to_pos_idx.append('_')
 
-
-    target = ref_to_pos_idx[stride:-stride]
-    pos_tagged_answer = ref_text_pos[target[0]:target[-1]+1]
+    if stride == 0:
+        target = ref_to_pos_idx[:]
+    else:
+        target = ref_to_pos_idx[stride:-stride]
+    
+    if target == []:
+        return get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+    
+    try:
+        if ref_text_pos[target[0]] != '_' and ref_to_pos_idx[target[-1]+1] != '_':
+            pos_tagged_answer = ref_text_pos[target[0]:target[-1]+1]
+        elif ref_text_pos[target[0]] == '_' and ref_to_pos_idx[(target[-1])+1] != '_':
+            pos_tagged_answer = ref_text_pos[target[0]-1:target[-1]+1]
+        else:
+            pos_tagged_answer = get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+            
+    except:
+        pos_tagged_answer = get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
 
     return pos_tagged_answer
 
-def get_pos_ensemble(pred_answer, ref_text, stride=15):
+def get_pos_ensemble(pred_answer, ref_text, stride):
+    kaiii = KhaiiiApi()
     mecab = Mecab()
     okt = Okt()
     kkma = Kkma()
     komoran = Komoran()
-    kaiii = KhaiiiApi()
+    
+    kaiii_tagged_anser = [(morph.lex, morph.tag) for word in kaiii.analyze(pred_answer) for morph in word.morphs]
+    mecab_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, mecab)
+    okt_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, okt)
+    kkma_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, kkma)
+    komoran_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, komoran)
 
-    while True:
-        kaiii_tagged_anser = [(morph.lex, morph.tag) for word in kaiii.analyze(pred_answer) for morph in word.morphs]
-        mecab_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, mecab)
-        okt_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, okt)
-        kkma_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, kkma)
-        komoran_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, komoran)
+    pos_tagged_answer = {
+        'kaiii' : kaiii_tagged_anser,
+        'mecab' : mecab_tagged_answer,
+        'okt' : okt_tagged_answer,
+        'kkma' : kkma_tagged_answer,
+        'komoran' : komoran_tagged_answer,
+    }
 
-        pos_tagged_answer = {
-            'kaiii' : kaiii_tagged_anser,
-            'mecab' : mecab_tagged_answer,
-            'okt' : okt_tagged_answer,
-            'kkma' : kkma_tagged_answer,
-            'komoran' : komoran_tagged_answer,
-        }
-
-        voting = []
-        for key, pos_tag in pos_tagged_answer.items():
-            print(f'{key} : {pos_tag}')
-            if pos_tag[-1][-1].startswith("J"):
-                voting.append(1)
-            else:
-                voting.append(0)
+    postposition_list = [pos_tag[-1][0] for key, pos_tag in pos_tagged_answer.items() if pos_tag[-1][1].startswith("J")]
+    
+    if len(postposition_list) >= 2:
+        remove_len = len(sorted(Counter(postposition_list).items(), key=lambda x : x[1], reverse=True)[0][0])
+        pred_answer = pred_answer[:-remove_len]
         
-        # print(f"Sum of postposition vote is {sum(voting)}")
-        if sum(voting) >= 2:
-            # print("postposition removal is progressed")
-            # print(f"befor : {pred_answer} \nafter : {pred_answer[:-1]}")
-            pred_answer = pred_answer[:-1]
-        else :
-            break
-            
-        # print(f"postposition removal is finished")
-        return pred_answer
+    return pred_answer
+    
+def pred_answer_post_process(context, offsets):
+    pred_answer = context[offsets[0] : offsets[1]]
+    
+    if pred_answer.startswith(' '):
+        offsets[0] += 1
+    if pred_answer.endswith(' '):
+        offsets[1] -= 1
+    pred_answer = pred_answer.strip()
+    
+    stride = 15
+    ref_text = context[(offsets[0])-stride:(offsets[1])+stride]
+    while (offsets[0])-stride < 0 or (offsets[1])+stride > len(context):
+        stride -= 1
+        ref_text = context[(offsets[0])-stride:(offsets[1])+stride]
 
+    removal_tag_list = ['[TITLE]', '[ANSWER]']
+    for tag in removal_tag_list:
+        if tag in pred_answer:
+            processed_answer = pred_answer.split(tag)[-1]
+            removed_answer = pred_answer.split(tag)[0]
+            offsets[0] += (len(removed_answer) + len(tag))
+            ref_text = ref_text[:ref_text.find(removed_answer)] + ref_text[(ref_text.find(processed_answer)):]
+            pred_answer = processed_answer
+            
+    if pred_answer.startswith('#'):
+        offsets[0] += 1
+        pred_answer = pred_answer[1:]
+        ref_text = ref_text[:ref_text.find('#')] + ref_text[(ref_text.find('#'))+1:]
+        
+    if pred_answer.endswith('#'):
+        offsets[1] -= 1
+        pred_answer = pred_answer[:-1]
+        ref_text = ref_text[:ref_text.rfind('#'):] + ref_text[(ref_text.rfind('#'))+1:]
+        
+    post_ensembled_answer = get_pos_ensemble(pred_answer, ref_text, stride)
+    pred_result = make_bracket_pair(post_ensembled_answer)
+    
+    return pred_result
+        
+    
 def save_pred_json(
     all_predictions, all_nbest_json, output_dir, prefix
 ):
@@ -331,32 +374,9 @@ def get_example_prediction(
     # predict text offset mapping & post-processed pred_answer
     context = example["context"]
     for pred in predictions:
-        offsets = list(pred.pop("offsets"))
-        answer = context[offsets[0] : offsets[1]]
-        stride = 15
-        ref_text = context[(offsets[0])-stride:(offsets[1])+stride]
-
-        removal_tag_list = ['[TITLE]', '[ANSWER]']
-        for tag in removal_tag_list:
-            if tag in answer:
-                pred_answer = answer.split(tag)[-1]
-                removed_answer = answer.split(tag)[0]
-                offsets[0] += (len(removed_answer) + len(tag))
-                ref_text = ref_text[:ref_text.find(removed_answer)] + ref_text[(ref_text.find(pred_answer)):]
-                
-        if pred_answer.startswith('#'):
-            offsets[0] += 1
-            pred_answer = pred_answer[1:]
-            ref_text = ref_text[:ref_text.find('#')] + ref_text[(ref_text.find('#'))+1:]
-            
-        if pred_answer.endswith('#'):
-            offsets[1] -= 1
-            pred_answer = pred_answer[:-1]
-            ref_text = ref_text[:ref_text.rfind('#'):] + ref_text[(ref_text.rfind('#'))+1:]
-            
-        post_ensembled_answer = get_pos_ensemble(pred_answer, ref_text, stride)
-        pred_result = make_bracket_pair(post_ensembled_answer)
-        pred["text"] = pred_result
+        offsets = pred.pop("offsets")
+        pred["text"] = context[offsets[0] : offsets[1]]
+        pred["offsets"] = list(offsets)
         
     # rare edge case에는 null이 아닌 예측이 하나도 없으며 failure를 피하기 위해 fake prediction을 만듭니다.
     if len(predictions) == 0 or (
@@ -376,6 +396,9 @@ def get_example_prediction(
     for prob, pred in zip(probs, predictions):
         pred["probability"] = prob
 
+    # 
+    predictions[0]["text"] = pred_answer_post_process(context, predictions[0]["offsets"])
+    
     # best prediction을 선택합니다.
     all_predictions[example["id"]] = predictions[0]["text"]
     
@@ -480,6 +503,8 @@ def post_processing_function(
         predictions=predictions,
         max_answer_length=training_args.max_answer_length,
         output_dir=training_args.output_dir,
+        # do_pos_ensemble=training_args.do_pos_ensemble
+        # mode
     )
     # Metric을 구할 수 있도록 Format을 맞춰줍니다.
     formatted_predictions = [

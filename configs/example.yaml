@@ -3,13 +3,15 @@ DataArguments:
   # DataPathArguments
   dataset_name: ./data/aistage-mrc/train_dataset
   dataset_path: ./data/aistage-mrc
-  context_path: preprocess_wiki.json
+  context_path: wiki_800.json
   overwrite_cache: False
   preprocessing_num_workers: null
+  curriculum_split_name: train_mask_2
+  curriculum_learn: False
   
   # TokenizerArguments
   max_seq_length: 384
-  pad_to_max_length: False
+  pad_to_max_length: True
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
@@ -52,16 +54,16 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: kiyoung2/roberta-large-qa
+  model_name_or_path: klue/roberta-large
   reader_type: extractive
-  architectures: RobertForQA
+  architectures: RobertaForQAWithConvSDSHead
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
-  model_init: basic
+  model_init: qaconv_head
   
   # ModelHeadArguments
-  model_head: conv
+  model_head: sds_conv
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
@@ -80,7 +82,7 @@ TrainingArguments:
   do_predict: True # eval_retrieval = True 필수
   evaluation_strategy: epoch
   save_strategy: epoch
-  per_device_train_batch_size: 32
+  per_device_train_batch_size: 16
   per_device_eval_batch_size: 32
   num_train_epochs: 1
   # eval_steps: 100
@@ -100,7 +102,7 @@ TrainingArguments:
   generation_max_length: null
   generation_num_beams: null
   
-  
+
 ProjectArguments:
 
   # AnalyzerArguments

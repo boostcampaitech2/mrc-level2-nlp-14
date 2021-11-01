@@ -13,7 +13,10 @@ class QATrainingArguments(TrainingArguments):
             "and end predictions are not conditioned on one another."
         },
     )
-
+    do_pos_ensemble: bool = field(
+        default=False,
+        metadata={"help": "Whether to use Part-of-Speech in train"},
+    )
     
 @dataclass
 class Seq2SeqTrainingArguments(QATrainingArguments):
