@@ -5,6 +5,7 @@ from solution.utils.constant import (
 )
 
 import torch
+import numpy as np
 
 from .corrupt import permute_sentences
 import re
@@ -71,19 +72,24 @@ def get_extractive_features(tokenizer, mode, data_args):
             # sentence pair가 입력으로 들어올 때 0과 1로 구분지음
             return_token_type_ids=data_args.return_token_type_ids,
             padding="max_length" if data_args.pad_to_max_length else False,
+            # return_tensors='pt'
         )
         return tokenized_examples
 
     def get_underline_embedding(tokenized_examples):
-        underline_ids = torch.zeros_like(tokenized_examples['input_ids'])
+        underline_ids = np.zeros_like(tokenized_examples['input_ids'])
         punct_start_token = '^'
         punct_end_token = '※'
         punct_start_id = tokenizer.convert_tokens_to_ids(punct_start_token)
         punct_end_id = tokenizer.convert_tokens_to_ids(punct_end_token)
-        for i in range(len(tokenized_examples['input_ids'])):
-            punct_start = torch.nonzero(tokenized_examples['input_ids'][i] == punct_start_id)
-            punct_end = torch.nonzero(tokenized_examples['input_ids'][i] == punct_end_id)
-            underline_ids[i][punct_start[0]+1:punct_end[0]] = 1
+        for i, row in enumerate(tokenized_examples['input_ids']):
+            if punct_start_id in row and punct_end_id in row:
+                punct_start = row.index(punct_start_id)
+                punct_end = row.index(punct_start_id)
+                underline_ids[i][punct_start+1:punct_end] = 1
+            else:
+                continue
+        underline_ids = underline_ids.tolist()
         tokenized_examples.update({"underline_ids": underline_ids})
 
         return tokenized_examples
@@ -131,8 +137,11 @@ def get_extractive_features(tokenizer, mode, data_args):
                 examples = remove_special_token(examples)
 
         tokenized_examples = tokenize_fn(examples)
-        if data_args.underline == 'underline':
+
+        if data_args.underline == True:
             tokenized_examples = get_underline_embedding(tokenized_examples)
+
+
 
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
@@ -145,6 +154,7 @@ def get_extractive_features(tokenizer, mode, data_args):
         for i, offsets in enumerate(offset_mapping):
             input_ids = tokenized_examples["input_ids"][i]
             cls_index = input_ids.index(tokenizer.cls_token_id)  # cls index
+            # cls_index = torch.nonzero(input_ids == tokenizer.cls_token_id)[0]
 
             # sequence id를 설정합니다 (context와 question을 구분).
             sequence_ids = tokenized_examples.sequence_ids(i)

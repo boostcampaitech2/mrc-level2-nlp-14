@@ -1,12 +1,12 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/v300/aistage-mrc/train_dataset
-  dataset_path: ./data/v300/aistage-mrc
+  dataset_name: ./data/aistage-mrc/train_dataset
+  dataset_path: ./data/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
-  dataset_version: v3.0.0
+  dataset_version: v4.0.0
   
   # TokenizerArguments
   max_seq_length: 384
@@ -59,26 +59,28 @@ ModelArguments:
 
   # ModelArguments
   # model_name_or_path: klue/bert-base
-  model_name_or_path: kiyoung2/roberta-large-qa
+  model_name_or_path: klue/roberta-large
+  # model_name_or_path: kiyoung2/roberta-large-qa
   reader_type: extractive
   architectures: RobertaForQAWithUnderline
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
-  model_init: qaconv_head
+  model_init: basic
   
   # ModelHeadArguments
   model_head: sds_conv
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
+  use_auth_token: True
   
 TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
   run_name: train_punc_underline
-  output_dir: outputs/run_test
+  output_dir: outputs/train_punc_underline
   overwrite_output_dir: False
   learning_rate: 2e-6
   do_train: True
@@ -86,8 +88,8 @@ TrainingArguments:
   do_predict: True # eval_retrieval = True 필수
   evaluation_strategy: epoch
   save_strategy: epoch
-  per_device_train_batch_size: 32
-  per_device_eval_batch_size: 32
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
   num_train_epochs: 10
   # eval_steps: 100
   # save_steps: 100
@@ -110,5 +112,5 @@ TrainingArguments:
 ProjectArguments:
 
   # AnalyzerArguments
-  wandb_project: klue_mrc
+  wandb_project: underline_bt
   checkpoint: null

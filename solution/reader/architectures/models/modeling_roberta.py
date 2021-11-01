@@ -3,7 +3,7 @@ from transformers import (
     RobertaPreTrainedModel,
     RobertaModel,
 )
-from transformers.modeling_outputs import QuestionAnsweringModelOutput
+from transformers.modeling_outputs import QuestionAnsweringModelOutput, BaseModelOutputWithPoolingAndCrossAttentions
 
 from ..modeling_heads import (
     QAConvSDSHead,
@@ -11,19 +11,16 @@ from ..modeling_heads import (
     QAConvHead,
 )
 
-<<<<<<< HEAD
 import torch
 import torch.nn as nn
-from torch.nn import CrossEntropyLoss
 from transformers.models.roberta.modeling_roberta import RobertaEmbeddings, RobertaPreTrainedModel, RobertaPooler, RobertaEncoder, RobertaModel, PreTrainedModel, RobertaConfig
 from transformers.modeling_outputs import QuestionAnsweringModelOutput, BaseModelOutputWithPoolingAndCrossAttentions
 
 
-=======
 import numpy as np
 import torch
 from torch.nn import CrossEntropyLoss
->>>>>>> e9bb05ebb236f0c9191fd4c54cda03891a7860a6
+
 
 class RobertaForQA(RobertaForQuestionAnswering):
     reader_type: str = "extractive"
@@ -155,7 +152,7 @@ class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
     """
 
     def __init__(self, config):
-        super().__init__()
+        super().__init__(config)
         self.underline_embeddings = nn.Embedding(2, config.hidden_size)
         self.config = config
 

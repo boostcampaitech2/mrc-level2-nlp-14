@@ -49,7 +49,7 @@ def main():
     set_seed(training_args.seed)
     
     print(f"model is from {model_args.model_name_or_path}")
-    print(f"data is from {data_args.dataset_name}")
+    print(f"data is from {data_args.dataset_path}")
     
     # wandb setting
     os.environ["WANDB_PROJECT"] = project_args.wandb_project
