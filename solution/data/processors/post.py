@@ -16,6 +16,7 @@
 import collections
 import json
 import os
+import re
 from typing import Optional, Tuple
 
 import numpy as np
@@ -25,9 +26,119 @@ from transformers import EvalPrediction
 from transformers.utils import logging
 from solution.utils.constant import ANSWER_COLUMN_NAME
 
+from konlpy.tag import Mecab, Okt, Kkma, Komoran
+from khaiii import KhaiiiApi
+
 
 logger = logging.get_logger(__name__)
 
+def make_bracket_pair(text):
+    pair_punc_1 = '〈〉≪≫《》「」『』‘’“”'
+    pair_punc_2 = '<>＜＞'
+    none_pair_punc = '"\''
+    tup_punc_1 = tuple(pair_punc_1)
+    tup_punc_2 = tuple(pair_punc_2)
+    tup_none_punc = tuple(none_pair_punc)
+    
+    # startswith
+    if text.startswith(tup_punc_1) and chr(ord(text[0])+1) not in text:
+        text += chr(ord(text[0])+1)
+
+    if text.startswith(tup_punc_2) and chr(ord(text[0])+2) not in text:
+        text += chr(ord(text[0])+2)
+
+    if text.startswith(tup_none_punc) and text.count(text[0])==1:
+        text += text[0]
+
+    # endswith
+    if text.endswith(tup_punc_1) and chr(ord(text[-1])-1) not in text:
+        text = chr(ord(text[-1])-1) + text
+        
+    if text.endswith(tup_punc_2) and chr(ord(text[-1])-2) not in text:
+        text = chr(ord(text[-1])-2) + text
+        
+    if text.endswith(tup_none_punc) and text.count(text[-1])==1:
+        text = text[-1] + text
+        
+    return text
+
+def get_pos_tagged_from_word(ref_text, pred_answer, analyzer):
+    ans_idx = ref_text.find(pred_answer) #'제국의 항복이 쇼와 천황의 옥음방송(라디오 방송)을 통해 일본'
+    pre_ref_text = f" # {pred_answer} # ".join(ref_text.split(pred_answer)) #'제국의 항복이 쇼와 천황의 # 옥음방송 #(라디오 방송)을 통해 일본'
+    ref_pos = analyzer.pos(pre_ref_text)
+    ans_span = [i for i, tok in enumerate(ref_pos) if '#' in tok[0]]
+    pos_tagged_answer = ref_pos[ans_span[0]+1:ans_span[1]]
+    
+    return pos_tagged_answer
+
+def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
+    ref_text_pos = analyzer.pos(ref_text)
+    ref_text_reverse = list(ref_text)[::-1]
+    ref_to_pos_idx = []
+
+    for i, m in enumerate(ref_text_pos):
+        if ref_text_reverse[-1:] == [' ']:
+            ref_text_reverse.pop()
+            ref_to_pos_idx.append('_')
+
+        for j in range(len(m[0])):
+            try:
+                ref_text_reverse.pop()
+                ref_to_pos_idx.append(i)
+            except IndexError:
+                return get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+                
+
+        if ref_text_reverse[-1:] == [' ']:
+            ref_text_reverse.pop()
+            ref_to_pos_idx.append('_')
+
+
+    target = ref_to_pos_idx[stride:-stride]
+    pos_tagged_answer = ref_text_pos[target[0]:target[-1]+1]
+
+    return pos_tagged_answer
+
+def get_pos_ensemble(pred_answer, ref_text, stride=15):
+    mecab = Mecab()
+    okt = Okt()
+    kkma = Kkma()
+    komoran = Komoran()
+    kaiii = KhaiiiApi()
+
+    while True:
+        kaiii_tagged_anser = [(morph.lex, morph.tag) for word in kaiii.analyze(pred_answer) for morph in word.morphs]
+        mecab_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, mecab)
+        okt_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, okt)
+        kkma_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, kkma)
+        komoran_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, komoran)
+
+        pos_tagged_answer = {
+            'kaiii' : kaiii_tagged_anser,
+            'mecab' : mecab_tagged_answer,
+            'okt' : okt_tagged_answer,
+            'kkma' : kkma_tagged_answer,
+            'komoran' : komoran_tagged_answer,
+        }
+
+        voting = []
+        for key, pos_tag in pos_tagged_answer.items():
+            print(f'{key} : {pos_tag}')
+            if pos_tag[-1][-1].startswith("J"):
+                voting.append(1)
+            else:
+                voting.append(0)
+        
+        # print(f"Sum of postposition vote is {sum(voting)}")
+        if sum(voting) >= 2:
+            # print("postposition removal is progressed")
+            # print(f"befor : {pred_answer} \nafter : {pred_answer[:-1]}")
+            pred_answer = pred_answer[:-1]
+        else :
+            break
+            
+        # print(f"postposition removal is finished")
+        return pred_answer
 
 def save_pred_json(
     all_predictions, all_nbest_json, output_dir, prefix
@@ -217,12 +328,36 @@ def get_example_prediction(
         all_predictions ([Dict]): total prediction to be updated
         all_nbest_json ([Dict]): total prediction of nbest size to be updated
     """
-    # predict text offset mapping
+    # predict text offset mapping & post-processed pred_answer
     context = example["context"]
     for pred in predictions:
-        offsets = pred.pop("offsets")
-        pred["text"] = context[offsets[0] : offsets[1]]
+        offsets = list(pred.pop("offsets"))
+        answer = context[offsets[0] : offsets[1]]
+        stride = 15
+        ref_text = context[(offsets[0])-stride:(offsets[1])+stride]
 
+        removal_tag_list = ['[TITLE]', '[ANSWER]']
+        for tag in removal_tag_list:
+            if tag in answer:
+                pred_answer = answer.split(tag)[-1]
+                removed_answer = answer.split(tag)[0]
+                offsets[0] += (len(removed_answer) + len(tag))
+                ref_text = ref_text[:ref_text.find(removed_answer)] + ref_text[(ref_text.find(pred_answer)):]
+                
+        if pred_answer.startswith('#'):
+            offsets[0] += 1
+            pred_answer = pred_answer[1:]
+            ref_text = ref_text[:ref_text.find('#')] + ref_text[(ref_text.find('#'))+1:]
+            
+        if pred_answer.endswith('#'):
+            offsets[1] -= 1
+            pred_answer = pred_answer[:-1]
+            ref_text = ref_text[:ref_text.rfind('#'):] + ref_text[(ref_text.rfind('#'))+1:]
+            
+        post_ensembled_answer = get_pos_ensemble(pred_answer, ref_text, stride)
+        pred_result = make_bracket_pair(post_ensembled_answer)
+        pred["text"] = pred_result
+        
     # rare edge case에는 null이 아닌 예측이 하나도 없으며 failure를 피하기 위해 fake prediction을 만듭니다.
     if len(predictions) == 0 or (
         len(predictions) == 1 and predictions[0]["text"] == ""

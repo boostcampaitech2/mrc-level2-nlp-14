@@ -66,11 +66,11 @@ class TokenizerArguments(DataPathArguments):
     
 @dataclass
 class RetrievalArguments(TokenizerArguments):
-    retrieval_mode: bool = field(
+    retrieval_mode: str = field(
         default="sparse",
         metadata={"help": ""}
     )
-    retrieval_name: bool = field(
+    retrieval_name: str = field(
         default="tfidf",
         metadata={"help": ""}
     )
@@ -112,7 +112,7 @@ class RetrievalArguments(TokenizerArguments):
 
 @dataclass
 class ElasticSearchArguments(RetrievalArguments):
-    index_name: bool = field(
+    index_name: str = field(
         default="wiki-index",
         metadata={"help": ""}
     )

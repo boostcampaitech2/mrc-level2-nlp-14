@@ -52,9 +52,9 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: klue/bert-base
+  model_name_or_path: kiyoung2/roberta-large-qa
   reader_type: extractive
-  architectures: BertForQA
+  architectures: RobertForQA
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
@@ -65,6 +65,7 @@ ModelArguments:
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
+  use_auth_token: True
   
 TrainingArguments:
 

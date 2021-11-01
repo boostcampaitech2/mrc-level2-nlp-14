@@ -49,7 +49,7 @@ def main():
     set_seed(training_args.seed)
     
     print(f"model is from {model_args.model_name_or_path}")
-    print(f"data is from {data_args.dataset_name}")
+    print(f"data is from {data_args.dataset_path}")
     
     # wandb setting
     os.environ["WANDB_PROJECT"] = project_args.wandb_project
@@ -64,7 +64,7 @@ def main():
     # Load Reader
     reader_cls = READER_HOST[model_args.reader_type]
     tokenizer = AutoTokenizer.from_pretrained(
-        tokenizer_name if model_args.tokenizer_name is not None
+        model_args.tokenizer_name if model_args.tokenizer_name is not None
         else model_args.model_name_or_path,
         use_auth_tokon=model_args.use_auth_token,
     )
@@ -123,7 +123,7 @@ def main():
         eval_metrics = reader.read(eval_dataset=eval_features,
                                    eval_examples=eval_datasets,
                                    mode=reader.mode)
-        reader.save_metrics("eval",git s
+        reader.save_metrics("eval",
                             eval_metrics,
                             eval_datasets)
     
