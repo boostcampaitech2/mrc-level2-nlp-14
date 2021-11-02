@@ -1,12 +1,14 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/v300/aistage-mrc/train_dataset
-  dataset_path: ./data/v300/aistage-mrc
+  dataset_name: ./data/v131/aistage-mrc/train_dataset
+  dataset_path: ./data/v131/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
-  dataset_version: v3.0.0
+  curriculum_split_name: train
+  curriculum_learn: False
+  dataset_version: v1.3.1
   
   # TokenizerArguments
   max_seq_length: 384
@@ -52,12 +54,12 @@ DataArguments:
   
   # DenoisingArguments
   # denoising_func: sentence_permutation
-  permute_sentence_ratio: 1.0
+  permute_sentence_ratio: 0.5
 
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: klue/roberta-large
+  model_name_or_path: deepset/xlm-roberta-large-squad2
   reader_type: extractive
   architectures: RobertaForQAWithConvSDSHead
   config_name: null
@@ -75,20 +77,20 @@ TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
-  run_name: denoing_test_tu_origin
-  output_dir: outputs/denoing_test_tu_origin
+  run_name: xlm_sds_conv
+  output_dir: outputs/xlm_sds_conv
   overwrite_output_dir: True
   learning_rate: 2e-6
   do_train: True
   do_eval: True
   do_predict: True # eval_retrieval = True 필수
-  evaluation_strategy: epoch
-  save_strategy: epoch
+  evaluation_strategy: steps
+  save_strategy: steps
   per_device_train_batch_size: 16
   per_device_eval_batch_size: 16
-  num_train_epochs: 10
-  # eval_steps: 100
-  # save_steps: 100
+  num_train_epochs: 2
+  eval_steps: 100
+  save_steps: 100
   save_total_limit: 3
   fp16: True
   weight_decay: 0.01
@@ -108,5 +110,5 @@ TrainingArguments:
 ProjectArguments:
 
   # AnalyzerArguments
-  wandb_project: klue_mrc
+  wandb_project: xlm_test_tu
   checkpoint: null
