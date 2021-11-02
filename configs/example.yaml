@@ -1,7 +1,7 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_path: ./data/v131/aistage-mrc
+  dataset_path: ./data/v300/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
@@ -58,7 +58,7 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: deepset/xlm-roberta-large-squad2
+  model_name_or_path: ./outputs/tu_curri_test_h_noaug_pororo_ver2
   reader_type: extractive
   architectures: RobertaForQAWithConvSDSHead
   config_name: null
@@ -77,12 +77,12 @@ TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
-  run_name: xlm_sds_conv
-  output_dir: outputs/xlm_sds_conv
+  run_name: tu_curri_test_h_noaug_pororo_ver2
+  output_dir: outputs/tu_curri_test_h_noaug_pororo_ver2
   overwrite_output_dir: True
   learning_rate: 2e-6
-  do_train: True
-  do_eval: True
+  do_train: False
+  do_eval: False
   do_predict: True # eval_retrieval = True 필수
   evaluation_strategy: steps
   save_strategy: steps
@@ -110,5 +110,5 @@ TrainingArguments:
 ProjectArguments:
 
   # AnalyzerArguments
-  wandb_project: xlm_test_tu
+  wandb_project: tu_curri_test
   checkpoint: null
