@@ -358,7 +358,7 @@ def get_candidate_preds(
 
 
 def get_example_prediction(
-    example, predictions, all_predictions, all_nbest_json
+    example, predictions, all_predictions, all_nbest_json, do_pos_ensemble
 ):  
     """
     한 exmaple에서 나온 prediction으로부터 offset을 answer text로 변환 후,
@@ -397,7 +397,8 @@ def get_example_prediction(
         pred["probability"] = prob
 
     # 
-    predictions[0]["text"] = pred_answer_post_process(context, predictions[0]["offsets"])
+    if do_pos_ensemble:
+        predictions[0]["text"] = pred_answer_post_process(context, predictions[0]["offsets"])
     
     # best prediction을 선택합니다.
     all_predictions[example["id"]] = predictions[0]["text"]
@@ -426,7 +427,8 @@ def postprocess_qa_predictions(
     max_answer_length: int = 30,
     output_dir: Optional[str] = None,
     prefix: Optional[str] = None,
-    is_world_process_zero: bool = True, ##
+    is_world_process_zero: bool = True,
+    do_pos_ensemble: bool = False,
 ):
     """
     Post-processes : qa model의 prediction 값을 후처리하는 함수
@@ -476,7 +478,7 @@ def postprocess_qa_predictions(
 
         # offset을 활용해 text로 변환 후, all_prediction, all_nbest_json 업데이트
         all_predictions, all_nbest_json = get_example_prediction(
-            example, predictions, all_predictions, all_nbest_json
+            example, predictions, all_predictions, all_nbest_json, do_pos_ensemble
         )
         
     # output_dir이 있으면 모든 dicts를 저장합니다.
@@ -503,8 +505,7 @@ def post_processing_function(
         predictions=predictions,
         max_answer_length=training_args.max_answer_length,
         output_dir=training_args.output_dir,
-        # do_pos_ensemble=training_args.do_pos_ensemble
-        # mode
+        do_pos_ensemble=training_args.do_pos_ensemble
     )
     # Metric을 구할 수 있도록 Format을 맞춰줍니다.
     formatted_predictions = [

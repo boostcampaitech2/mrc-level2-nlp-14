@@ -4,7 +4,7 @@ DataArguments:
   dataset_name: ./data/aistage-mrc/train_dataset
   dataset_path: ./data/aistage-mrc
   context_path: wiki_800.json
-  overwrite_cache: False
+  overwrite_cache: True
   preprocessing_num_workers: null
   curriculum_split_name: train_mask_2
   curriculum_learn: False
@@ -80,6 +80,7 @@ TrainingArguments:
   do_train: True
   do_eval: True
   do_predict: True # eval_retrieval = True 필수
+  do_pos_ensemble: False
   evaluation_strategy: epoch
   save_strategy: epoch
   per_device_train_batch_size: 16
