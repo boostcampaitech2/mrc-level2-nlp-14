@@ -16,6 +16,7 @@
 import collections
 import json
 import os
+from collections import Counter
 from typing import Optional, Tuple
 
 import numpy as np
@@ -25,10 +26,163 @@ from transformers import EvalPrediction
 from transformers.utils import logging
 from solution.utils.constant import ANSWER_COLUMN_NAME
 
+from konlpy.tag import Mecab, Okt, Kkma, Komoran
+from khaiii import KhaiiiApi
+
 
 logger = logging.get_logger(__name__)
 
+def make_bracket_pair(text):
+    pair_punc_1 = '〈〉≪≫《》「」『』‘’“”'
+    pair_punc_2 = '<>＜＞'
+    none_pair_punc = '"\''
+    tup_punc_1 = tuple(pair_punc_1)
+    tup_punc_2 = tuple(pair_punc_2)
+    tup_none_punc = tuple(none_pair_punc)
+    
+    # startswith
+    if text.startswith(tup_punc_1) and chr(ord(text[0])+1) not in text:
+        text += chr(ord(text[0])+1)
 
+    if text.startswith(tup_punc_2) and chr(ord(text[0])+2) not in text:
+        text += chr(ord(text[0])+2)
+
+    if text.startswith(tup_none_punc) and text.count(text[0])==1:
+        text += text[0]
+
+    # endswith
+    if text.endswith(tup_punc_1) and chr(ord(text[-1])-1) not in text:
+        text = chr(ord(text[-1])-1) + text
+        
+    if text.endswith(tup_punc_2) and chr(ord(text[-1])-2) not in text:
+        text = chr(ord(text[-1])-2) + text
+        
+    if text.endswith(tup_none_punc) and text.count(text[-1])==1:
+        text = text[-1] + text
+        
+    return text
+
+def get_pos_tagged_from_word(ref_text, pred_answer, analyzer):
+    ans_idx = ref_text.find(pred_answer) #'제국의 항복이 쇼와 천황의 옥음방송(라디오 방송)을 통해 일본'
+    pre_ref_text = f" # {pred_answer} # ".join(ref_text.split(pred_answer)) #'제국의 항복이 쇼와 천황의 # 옥음방송 #(라디오 방송)을 통해 일본'
+    ref_pos = analyzer.pos(pre_ref_text)
+    ans_span = [i for i, tok in enumerate(ref_pos) if '#' in tok[0]]
+    pos_tagged_answer = ref_pos[ans_span[0]+1:ans_span[1]]
+    
+    return pos_tagged_answer
+
+def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
+    ref_text_pos = analyzer.pos(ref_text)
+    ref_text_reverse = list(ref_text)[::-1]
+    ref_to_pos_idx = []
+
+    for i, m in enumerate(ref_text_pos):
+        if ref_text_reverse[-1:] == [' ']:
+            ref_text_reverse.pop()
+            ref_to_pos_idx.append('_')
+
+        for j in range(len(m[0])):
+            try:
+                ref_text_reverse.pop()
+                ref_to_pos_idx.append(i)
+            except IndexError:
+                return get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+                
+
+        if ref_text_reverse[-1:] == [' ']:
+            ref_text_reverse.pop()
+            ref_to_pos_idx.append('_')
+
+    if stride == 0:
+        target = ref_to_pos_idx[:]
+    else:
+        target = ref_to_pos_idx[stride:-stride]
+    
+    if target == []:
+        return get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+    
+    try:
+        if ref_text_pos[target[0]] != '_' and ref_to_pos_idx[target[-1]+1] != '_':
+            pos_tagged_answer = ref_text_pos[target[0]:target[-1]+1]
+        elif ref_text_pos[target[0]] == '_' and ref_to_pos_idx[(target[-1])+1] != '_':
+            pos_tagged_answer = ref_text_pos[target[0]-1:target[-1]+1]
+        else:
+            pos_tagged_answer = get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+            
+    except:
+        pos_tagged_answer = get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+
+    return pos_tagged_answer
+
+def get_pos_ensemble(pred_answer, ref_text, stride):
+    kaiii = KhaiiiApi()
+    mecab = Mecab()
+    okt = Okt()
+    kkma = Kkma()
+    komoran = Komoran()
+    
+    kaiii_tagged_anser = [(morph.lex, morph.tag) for word in kaiii.analyze(pred_answer) for morph in word.morphs]
+    mecab_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, mecab)
+    okt_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, okt)
+    kkma_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, kkma)
+    komoran_tagged_answer = get_pos_tagged_from_sentence(ref_text, stride, pred_answer, komoran)
+
+    pos_tagged_answer = {
+        'kaiii' : kaiii_tagged_anser,
+        'mecab' : mecab_tagged_answer,
+        'okt' : okt_tagged_answer,
+        'kkma' : kkma_tagged_answer,
+        'komoran' : komoran_tagged_answer,
+    }
+
+    postposition_list = [pos_tag[-1][0] for key, pos_tag in pos_tagged_answer.items() if pos_tag[-1][1].startswith("J")]
+    
+    if len(postposition_list) >= 2:
+        remove_len = len(sorted(Counter(postposition_list).items(), key=lambda x : x[1], reverse=True)[0][0])
+        pred_answer = pred_answer[:-remove_len]
+        
+    return pred_answer
+    
+def pred_answer_post_process(context, offsets):
+    pred_answer = context[offsets[0] : offsets[1]]
+    
+    if pred_answer.startswith(' '):
+        offsets[0] += 1
+    if pred_answer.endswith(' '):
+        offsets[1] -= 1
+    pred_answer = pred_answer.strip()
+    
+    stride = 15
+    ref_text = context[(offsets[0])-stride:(offsets[1])+stride]
+    while (offsets[0])-stride < 0 or (offsets[1])+stride > len(context):
+        stride -= 1
+        ref_text = context[(offsets[0])-stride:(offsets[1])+stride]
+
+    removal_tag_list = ['[TITLE]', '[ANSWER]']
+    for tag in removal_tag_list:
+        if tag in pred_answer:
+            processed_answer = pred_answer.split(tag)[-1]
+            removed_answer = pred_answer.split(tag)[0]
+            offsets[0] += (len(removed_answer) + len(tag))
+            ref_text = ref_text[:ref_text.find(removed_answer)] + ref_text[(ref_text.find(processed_answer)):]
+            pred_answer = processed_answer
+            
+    if pred_answer.startswith('#'):
+        offsets[0] += 1
+        pred_answer = pred_answer[1:]
+        ref_text = ref_text[:ref_text.find('#')] + ref_text[(ref_text.find('#'))+1:]
+        
+    if pred_answer.endswith('#'):
+        offsets[1] -= 1
+        pred_answer = pred_answer[:-1]
+        ref_text = ref_text[:ref_text.rfind('#'):] + ref_text[(ref_text.rfind('#'))+1:]
+        
+    post_ensembled_answer = get_pos_ensemble(pred_answer, ref_text, stride)
+    pred_result = make_bracket_pair(post_ensembled_answer)
+    
+    return pred_result
+        
+    
 def save_pred_json(
     all_predictions, all_nbest_json, output_dir, prefix
 ):
@@ -204,7 +358,7 @@ def get_candidate_preds(
 
 
 def get_example_prediction(
-    example, predictions, all_predictions, all_nbest_json
+    example, predictions, all_predictions, all_nbest_json, do_pos_ensemble
 ):  
     """
     한 exmaple에서 나온 prediction으로부터 offset을 answer text로 변환 후,
@@ -217,12 +371,13 @@ def get_example_prediction(
         all_predictions ([Dict]): total prediction to be updated
         all_nbest_json ([Dict]): total prediction of nbest size to be updated
     """
-    # predict text offset mapping
+    # predict text offset mapping & post-processed pred_answer
     context = example["context"]
     for pred in predictions:
         offsets = pred.pop("offsets")
         pred["text"] = context[offsets[0] : offsets[1]]
-
+        pred["offsets"] = list(offsets)
+        
     # rare edge case에는 null이 아닌 예측이 하나도 없으며 failure를 피하기 위해 fake prediction을 만듭니다.
     if len(predictions) == 0 or (
         len(predictions) == 1 and predictions[0]["text"] == ""
@@ -241,6 +396,10 @@ def get_example_prediction(
     for prob, pred in zip(probs, predictions):
         pred["probability"] = prob
 
+    # 
+    if do_pos_ensemble:
+        predictions[0]["text"] = pred_answer_post_process(context, predictions[0]["offsets"])
+    
     # best prediction을 선택합니다.
     all_predictions[example["id"]] = predictions[0]["text"]
     
@@ -268,7 +427,8 @@ def postprocess_qa_predictions(
     max_answer_length: int = 30,
     output_dir: Optional[str] = None,
     prefix: Optional[str] = None,
-    is_world_process_zero: bool = True, ##
+    is_world_process_zero: bool = True,
+    do_pos_ensemble: bool = False,
 ):
     """
     Post-processes : qa model의 prediction 값을 후처리하는 함수
@@ -318,7 +478,7 @@ def postprocess_qa_predictions(
 
         # offset을 활용해 text로 변환 후, all_prediction, all_nbest_json 업데이트
         all_predictions, all_nbest_json = get_example_prediction(
-            example, predictions, all_predictions, all_nbest_json
+            example, predictions, all_predictions, all_nbest_json, do_pos_ensemble
         )
         
     # output_dir이 있으면 모든 dicts를 저장합니다.
@@ -346,6 +506,7 @@ def post_processing_function(
         max_answer_length=training_args.max_answer_length,
         output_dir=training_args.output_dir,
         prefix=training_args.run_name + '_' + mode,
+        do_pos_ensemble=training_args.do_pos_ensemble
     )
     # Metric을 구할 수 있도록 Format을 맞춰줍니다.
     formatted_predictions = [

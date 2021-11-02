@@ -71,6 +71,7 @@ ModelArguments:
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
+  use_auth_token: True
   
 TrainingArguments:
 
@@ -105,7 +106,7 @@ TrainingArguments:
   generation_max_length: null
   generation_num_beams: null
   
-  
+
 ProjectArguments:
 
   # AnalyzerArguments
