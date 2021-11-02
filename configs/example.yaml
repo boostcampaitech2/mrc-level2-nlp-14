@@ -1,7 +1,6 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/v131/aistage-mrc/train_dataset
   dataset_path: ./data/v131/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True

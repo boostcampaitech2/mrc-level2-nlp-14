@@ -345,6 +345,7 @@ def post_processing_function(
         predictions=predictions,
         max_answer_length=training_args.max_answer_length,
         output_dir=training_args.output_dir,
+        prefix=training_args.run_name + '_' + mode,
     )
     # Metric을 구할 수 있도록 Format을 맞춰줍니다.
     formatted_predictions = [
