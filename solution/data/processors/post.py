@@ -137,7 +137,7 @@ def get_pos_ensemble(pred_answer, ref_text, stride):
 
     postposition_list = [pos_tag[-1][0] for key, pos_tag in pos_tagged_answer.items() if pos_tag[-1][1].startswith("J")]
     
-    if len(postposition_list) >= 2:
+    if len(postposition_list) >= 4:
         remove_len = len(sorted(Counter(postposition_list).items(), key=lambda x : x[1], reverse=True)[0][0])
         pred_answer = pred_answer[:-remove_len]
         
@@ -396,7 +396,7 @@ def get_example_prediction(
     for prob, pred in zip(probs, predictions):
         pred["probability"] = prob
 
-    # 
+    # predict일 경우 진행
     if do_pos_ensemble:
         predictions[0]["text"] = pred_answer_post_process(context, predictions[0]["offsets"])
     
@@ -498,6 +498,13 @@ def post_processing_function(
     training_args, 
     mode,
 ):
+    
+    if mode == 'predict':
+        print("*** progress part-of-speech ensemble & bracket pairing ***")
+        training_args.do_pos_ensemble = True
+    else:
+        training_args.do_pos_ensemble = False
+        
     # Post-processing: start logits과 end logits을 original context의 정답과 match시킵니다.
     predictions = postprocess_qa_predictions(
         examples=examples,

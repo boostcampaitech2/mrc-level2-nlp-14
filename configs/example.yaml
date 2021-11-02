@@ -23,7 +23,7 @@ DataArguments:
   retrieval_tokenizer_name: mecab
   sp_max_features: 50000
   sp_ngram_range: [1,2]
-  top_k_retrieval: 35
+  top_k_retrieval: 10
   use_faiss: False
   eval_retrieval: True
   num_clusters: 64
@@ -74,7 +74,7 @@ TrainingArguments:
   # HfTrainingArguments
   report_to: wandb
   run_name: run_test
-  output_dir: outputs/run_test
+  output_dir: outputs/run_test_2
   overwrite_output_dir: False
   learning_rate: 2e-6
   do_train: True
