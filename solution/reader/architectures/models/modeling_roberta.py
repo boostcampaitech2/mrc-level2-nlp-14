@@ -339,9 +339,17 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
         super().__init__(config)
         assert config.reader_type == self.reader_type
 
+        config.num_labels = 2
         self.num_labels = config.num_labels
+
         self.roberta = RobertaModelWithUnderline(config, add_pooling_layer=False)
-        self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
+        # self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
+        self.qa_outputs = QAConvSDSHead(
+            config.qa_conv_input_size,
+            config.hidden_size,
+            config.qa_conv_n_layers,
+            config.num_labels
+            )
         self.init_weights()
 
     def forward(
@@ -352,6 +360,8 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
         position_ids=None,
         underline_ids = None,
         head_mask=None,
+
+
         inputs_embeds=None,
         start_positions=None,
         end_positions=None,

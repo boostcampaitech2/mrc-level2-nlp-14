@@ -3,13 +3,14 @@ import faiss
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
-
+import torch
 from datasets import Dataset, DatasetDict
-
+from transformers import AutoModel, AutoTokenizer
 from solution.utils.constant import (
     MRC_EVAL_FEATURES,
     MRC_PREDICT_FEATURES
 )
+
 
 
 class FaissMixin:
@@ -75,7 +76,7 @@ class OutputMixin:
                 # Retrieve한 Passage의 id, score, context를 반환합니다.
                 "context_id": doc_indices[idx],
                 "context_score": doc_scores[idx],
-                "context": self.process_topk_context(contexts)
+                "context": self.process_topk_context_punctuation(contexts, example["question"])
             }
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환
@@ -104,10 +105,52 @@ class OutputMixin:
         features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
         datasets = Dataset.from_pandas(df, features=features)
         return datasets
-    
+
     def process_topk_context(self, contexts):
-        # self.args에 들어오는 option으로 top-k 처리
         contexts = "#".join(contexts)
         contexts = contexts.split('#')
         contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
         return " ".join(contexts)
+    
+    def process_topk_context_punctuation(self, contexts, question):
+        # self.args에 들어오는 option으로 top-k 처리
+        contexts = "#".join(contexts)
+        contexts = contexts.split('#')
+        contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
+
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+        tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
+        p_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
+        q_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
+        
+        q_seqs = tokenizer(question, padding="max_length", truncation=True, return_tensors='pt')
+        p_seqs = tokenizer(contexts, padding="max_length", truncation=True, return_tensors='pt')
+
+        torch.cuda.empty_cache()
+
+        p_inputs = {'input_ids': p_seqs['input_ids'].to(device),
+          'attention_mask': p_seqs['attention_mask'].to(device),
+          'token_type_ids': p_seqs['token_type_ids'].to(device)
+          }
+      
+        q_inputs = {'input_ids': q_seqs['input_ids'].to(device),    
+          'attention_mask': q_seqs['attention_mask'].to(device),
+          'token_type_ids': q_seqs['token_type_ids'].to(device)}
+
+        p_outputs = p_encoder(**p_inputs)[1]
+        q_outputs = q_encoder(**q_inputs)[1]
+
+        dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
+        rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
+        topk_sentences = rank[:5].tolist()
+
+        new_contexts = []
+        for i, sentence in enumerate(contexts): 
+            if i in topk_sentences:
+                sentence = '^' + sentence + '※'
+                new_contexts.append(sentence)
+            else:
+                new_contexts.append(sentence)
+
+        return ' '.join(new_contexts)

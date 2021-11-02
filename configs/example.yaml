@@ -1,12 +1,12 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/aistage-mrc/train_dataset
+  dataset_name: ./data/aistage-mrc/train_punctuation
   dataset_path: ./data/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
-  dataset_version: v4.0.0
+  dataset_version: v4.0.2
   
   # TokenizerArguments
   max_seq_length: 384
@@ -14,7 +14,7 @@ DataArguments:
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
-  underline: True
+  underline: False
   
   # RetrievalArguments
   retrieval_mode: elastic_engine
@@ -59,14 +59,17 @@ ModelArguments:
 
   # ModelArguments
   # model_name_or_path: klue/bert-base
+  # model_name_or_path: kiyoung2/roberta-large-qaconv-sds-aug
   model_name_or_path: klue/roberta-large
-  # model_name_or_path: kiyoung2/roberta-large-qa
   reader_type: extractive
-  architectures: RobertaForQAWithUnderline
+  # architectures: RobertaForQA
+  architectures: RobertaForQAWithConvSDSHead
+  # architectures: RobertaForQAWithUnderline
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
-  model_init: basic
+  model_init: qaconv_head
+
   
   # ModelHeadArguments
   model_head: sds_conv
@@ -79,20 +82,20 @@ TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
-  run_name: train_punc_underline
-  output_dir: outputs/train_punc_underline
+  run_name: no_aug_train_valid_test_punctuation_only
+  output_dir: outputs/no_aug_train_valid_test_punctuation_only
   overwrite_output_dir: False
   learning_rate: 2e-6
   do_train: True
   do_eval: True
   do_predict: True # eval_retrieval = True 필수
-  evaluation_strategy: epoch
-  save_strategy: epoch
+  evaluation_strategy: steps
+  save_strategy: steps
   per_device_train_batch_size: 16
   per_device_eval_batch_size: 16
-  num_train_epochs: 10
-  # eval_steps: 100
-  # save_steps: 100
+  num_train_epochs: 3
+  eval_steps: 100
+  save_steps: 100
   save_total_limit: 3
   fp16: True
   weight_decay: 0.01

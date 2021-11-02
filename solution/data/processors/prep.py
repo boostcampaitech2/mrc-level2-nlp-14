@@ -154,7 +154,6 @@ def get_extractive_features(tokenizer, mode, data_args):
         for i, offsets in enumerate(offset_mapping):
             input_ids = tokenized_examples["input_ids"][i]
             cls_index = input_ids.index(tokenizer.cls_token_id)  # cls index
-            # cls_index = torch.nonzero(input_ids == tokenizer.cls_token_id)[0]
 
             # sequence id를 설정합니다 (context와 question을 구분).
             sequence_ids = tokenized_examples.sequence_ids(i)
@@ -206,15 +205,18 @@ def get_extractive_features(tokenizer, mode, data_args):
                         offsets[token_start_index][0] <= start_char
                     ):
                         token_start_index += 1
+                    
                     tokenized_examples["start_positions"].append(token_start_index - 1)
 
                     # token_end_index를 실제 위치로 맞춰주는 과정
                     while offsets[token_end_index][1] >= end_char:
                         token_end_index -= 1
+                    
                     tokenized_examples["end_positions"].append(token_end_index + 1)
 
         return tokenized_examples
     
+
     def prepare_validation_features(examples, retriever=None):
         pad_on_right = tokenizer.padding_side == "right"
 
@@ -222,6 +224,10 @@ def get_extractive_features(tokenizer, mode, data_args):
             examples = remove_special_token(examples)
 
         tokenized_examples = tokenize_fn(examples)
+
+        if data_args.underline == True:
+            tokenized_examples = get_underline_embedding(tokenized_examples)
+
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
 
