@@ -1,3 +1,6 @@
+import numpy as np
+import torch
+from torch.nn import CrossEntropyLoss
 from transformers import (
     RobertaForQuestionAnswering,
     RobertaPreTrainedModel,
