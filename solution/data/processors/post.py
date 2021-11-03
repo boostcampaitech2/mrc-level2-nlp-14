@@ -144,7 +144,7 @@ def get_pos_ensemble(pred_answer, ref_text, stride):
     return pred_answer
     
 def pred_answer_post_process(context, offsets):
-    pred_answer = context[offsets[0] : offsets[1]]
+    pred_answer = context[offsets[0] : offsets[1] + 1]
     
     if pred_answer.startswith(' '):
         offsets[0] += 1
