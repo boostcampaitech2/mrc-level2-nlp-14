@@ -111,7 +111,7 @@ def get_extractive_features(tokenizer, mode, data_args):
             else:
                 # text에서 정답의 start/end character index를 가져옴
                 start_char = answers["answer_start"][0]
-                end_char = start_char + len(answers["text"][0])
+                end_char = start_char + len(answers["text"][0]) + 1
 
                 # sequence_ids는 0, 1, None의 세 값만 가짐
                 # None 0 0 ... 0 None 1 1 ... 1 None

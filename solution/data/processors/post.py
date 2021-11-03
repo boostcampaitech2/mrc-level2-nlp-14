@@ -137,7 +137,7 @@ def get_pos_ensemble(pred_answer, ref_text, stride):
 
     postposition_list = [pos_tag[-1][0] for key, pos_tag in pos_tagged_answer.items() if pos_tag[-1][1].startswith("J")]
     
-    if len(postposition_list) >= 4:
+    if len(postposition_list) >= 3:
         remove_len = len(sorted(Counter(postposition_list).items(), key=lambda x : x[1], reverse=True)[0][0])
         pred_answer = pred_answer[:-remove_len]
         
