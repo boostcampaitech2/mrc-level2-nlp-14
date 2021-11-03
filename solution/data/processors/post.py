@@ -62,12 +62,9 @@ def make_bracket_pair(text):
         
     return text
 
-def get_pos_tagged_from_word(ref_text, pred_answer, analyzer):
-    ans_idx = ref_text.find(pred_answer) #'제국의 항복이 쇼와 천황의 옥음방송(라디오 방송)을 통해 일본'
-    pre_ref_text = f" # {pred_answer} # ".join(ref_text.split(pred_answer)) #'제국의 항복이 쇼와 천황의 # 옥음방송 #(라디오 방송)을 통해 일본'
-    ref_pos = analyzer.pos(pre_ref_text)
-    ans_span = [i for i, tok in enumerate(ref_pos) if '#' in tok[0]]
-    pos_tagged_answer = ref_pos[ans_span[0]+1:ans_span[1]]
+def get_pos_tagged_from_word(pred_answer, analyzer):
+
+    pos_tagged_answer = analyzer.pos(pred_answer)
     
     return pos_tagged_answer
 
@@ -86,7 +83,7 @@ def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
                 ref_text_reverse.pop()
                 ref_to_pos_idx.append(i)
             except IndexError:
-                return get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+                return get_pos_tagged_from_word(pred_answer, analyzer)
                 
 
         if ref_text_reverse[-1:] == [' ']:
@@ -99,7 +96,7 @@ def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
         target = ref_to_pos_idx[stride:-stride]
     
     if target == []:
-        return get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+        return get_pos_tagged_from_word(pred_answer, analyzer)
     
     try:
         if ref_text_pos[target[0]] != '_' and ref_to_pos_idx[target[-1]+1] != '_':
@@ -107,10 +104,10 @@ def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
         elif ref_text_pos[target[0]] == '_' and ref_to_pos_idx[(target[-1])+1] != '_':
             pos_tagged_answer = ref_text_pos[target[0]-1:target[-1]+1]
         else:
-            pos_tagged_answer = get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+            pos_tagged_answer = get_pos_tagged_from_word(pred_answer, analyzer)
             
     except:
-        pos_tagged_answer = get_pos_tagged_from_word(ref_text, pred_answer, analyzer)
+        pos_tagged_answer = get_pos_tagged_from_word(pred_answer, analyzer)
 
     return pos_tagged_answer
 
