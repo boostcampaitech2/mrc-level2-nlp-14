@@ -134,14 +134,14 @@ def get_pos_ensemble(pred_answer, ref_text, stride):
 
     postposition_list = [pos_tag[-1][0] for key, pos_tag in pos_tagged_answer.items() if pos_tag[-1][1].startswith("J")]
     
-    if len(postposition_list) >= 3:
+    if len(postposition_list) >= 4:
         remove_len = len(sorted(Counter(postposition_list).items(), key=lambda x : x[1], reverse=True)[0][0])
         pred_answer = pred_answer[:-remove_len]
         
     return pred_answer
     
 def pred_answer_post_process(context, offsets):
-    pred_answer = context[offsets[0] : offsets[1] + 1]
+    pred_answer = context[offsets[0] : offsets[1]]
     
     if pred_answer.startswith(' '):
         offsets[0] += 1
