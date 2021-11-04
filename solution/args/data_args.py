@@ -13,10 +13,6 @@ DATA ARGS의 항목이 너무 많아서 지저분하다.
 @dataclass
 class DataPathArguments(DataArguments):
     """ Arguments related to data. """
-    dataset_name: str = field(
-        default="./data/aistage-mrc/train_dataset", 
-        metadata={"help": "The name of the dataset to use."},
-    )
     dataset_path: str = field(
         default="./data/aistage-mrc",
         metadata={"help": "The path of the dataset stored"},
@@ -33,7 +29,18 @@ class DataPathArguments(DataArguments):
         default=None,
         metadata={"help": "The number of processes to use for the preprocessing."},
     )
-
+    dataset_version: str = field(
+        default="v1.0.0",
+        metadata={"help": "Dataset version"},
+    )
+    curriculum_learn: bool = field(
+        default=False,
+        metadata={"help": "Use curriculum learning method"},
+    )
+    curriculum_split_name: Optional[str] = field(
+        default="./data/aistage-mrc/train_dataset", 
+        metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
+    )
     
 @dataclass
 class TokenizerArguments(DataPathArguments):
@@ -66,11 +73,11 @@ class TokenizerArguments(DataPathArguments):
     
 @dataclass
 class RetrievalArguments(TokenizerArguments):
-    retrieval_mode: bool = field(
+    retrieval_mode: str = field(
         default="sparse",
         metadata={"help": ""}
     )
-    retrieval_name: bool = field(
+    retrieval_name: str = field(
         default="tfidf",
         metadata={"help": ""}
     )
@@ -109,10 +116,9 @@ class RetrievalArguments(TokenizerArguments):
         metadata={"help": "Define how many clusters to use for faiss."}
     )
 
-
 @dataclass
 class ElasticSearchArguments(RetrievalArguments):
-    index_name: bool = field(
+    index_name: str = field(
         default="wiki-index",
         metadata={"help": ""}
     )
@@ -209,7 +215,19 @@ class ElasticSearchArguments(RetrievalArguments):
         metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
     )
     
-    
+
 @dataclass
-class MrcDataArguments(ElasticSearchArguments):
+class DenoisingArguments(ElasticSearchArguments):
+    denoising_func: Optional[str] = field(
+        default=None,
+        metadata={"help": "[sentence_permutation,...]"}
+    )
+    permute_sentence_ratio: float = field(
+        default=1.0,
+        metadata={"help": "[0.0 ~ 1.0]"}
+    )
+
+
+@dataclass
+class MrcDataArguments(DenoisingArguments):
     pass
