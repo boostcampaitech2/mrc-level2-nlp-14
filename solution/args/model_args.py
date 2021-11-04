@@ -57,7 +57,7 @@ class ModelingArguments(ModelArguments):
         metadata={"help": ""}
     )
     revision: str = field(
-        default=None,
+        default="main",
         metadata={"help": ""}
     )
     
