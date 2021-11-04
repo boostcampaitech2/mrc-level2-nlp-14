@@ -68,7 +68,8 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name is not None
         else model_args.model_name_or_path,
-        use_auth_tokon=model_args.use_auth_token,
+        use_auth_token=model_args.use_auth_token,
+        revision=model_args.revision,
     )
     reader = reader_cls(model_args, tokenizer)
 

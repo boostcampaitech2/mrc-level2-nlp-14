@@ -54,13 +54,22 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
+<<<<<<< Updated upstream
   model_name_or_path: klue/roberta-large
+=======
+  model_name_or_path: ./outputs/layer_2_1900
+>>>>>>> Stashed changes
   reader_type: extractive
   architectures: RobertaForQAWithConvSDSHead
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
   model_init: qaconv_head
+<<<<<<< Updated upstream
+=======
+  # use_auth_token: True
+  # revision: None
+>>>>>>> Stashed changes
   
   # ModelHeadArguments
   model_head: sds_conv
@@ -73,21 +82,32 @@ TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
+<<<<<<< Updated upstream
   run_name: run_test
   output_dir: outputs/run_test_2
+=======
+  run_name: v1.4.4_train_shuffle
+  output_dir: outputs/wiki_pororo_ver2_non_ner
+>>>>>>> Stashed changes
   overwrite_output_dir: False
   learning_rate: 2e-6
   do_train: True
   do_eval: True
   do_predict: True # eval_retrieval = True 필수
+<<<<<<< Updated upstream
   do_pos_ensemble: False
   evaluation_strategy: epoch
   save_strategy: epoch
   per_device_train_batch_size: 16
+=======
+  evaluation_strategy: steps
+  save_strategy: steps
+  per_device_train_batch_size: 20
+>>>>>>> Stashed changes
   per_device_eval_batch_size: 32
   num_train_epochs: 1
-  # eval_steps: 100
-  # save_steps: 100
+  eval_steps: 100
+  save_steps: 100
   save_total_limit: 3
   fp16: True
   weight_decay: 0.01
@@ -95,7 +115,7 @@ TrainingArguments:
   load_best_model_at_end: True
   metric_for_best_model: exact_match
   logging_dir: logs
-  lr_scheduler_type: cosine
+  lr_scheduler_type: cosine_with_restarts
 
   # Seq2SeqTrainingArguments
   sortish_sampler: False
@@ -107,5 +127,5 @@ TrainingArguments:
 ProjectArguments:
 
   # AnalyzerArguments
-  wandb_project: klue_mrc
+  wandb_project: klue_mrc_yj
   checkpoint: null
