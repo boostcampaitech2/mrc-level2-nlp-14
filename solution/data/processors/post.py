@@ -32,7 +32,17 @@ from khaiii import KhaiiiApi
 
 logger = logging.get_logger(__name__)
 
-def make_bracket_pair(text):
+def make_bracket_pair(
+    text
+):
+    """
+    text의 시작 또는 끝이 꺽쇠 및 괄호이지만 한 쪽만 있는 경우 쌍을 맞춰주고,
+    text 중간에 '('가 나왔지만 끝에 ')' 가 등장하지 않을 경우 '(' 뒤쪽은 제거하여 반환합니다.
+
+    Args:
+        text ([str]): pred_answer.
+    """
+    
     pair_punc_1 = '〈〉≪≫《》「」『』‘’“”'
     pair_punc_2 = '<>＜＞'
     none_pair_punc = '"\''
@@ -59,16 +69,42 @@ def make_bracket_pair(text):
         
     if text.endswith(tup_none_punc) and text.count(text[-1])==1:
         text = text[-1] + text
-        
+    
+    # deletion
+    if not text.startswith('(') and '(' in text and ')' not in text:
+        text = text[:text.find('(')]
+    
     return text
 
-def get_pos_tagged_from_word(pred_answer, analyzer):
+def get_pos_tagged_from_word(
+    pred_answer, analyzer
+):
+    """
+    pred_answer의 형태소 분석 결과를 반환합니다.
+
+    Args:
+        pred_answer ([str]): predicted answer.
+        analyzer ([type]): part-of-speech tagger(kaiii, mecab, okt, kkma, komoran).
+    """
 
     pos_tagged_answer = analyzer.pos(pred_answer)
     
     return pos_tagged_answer
 
-def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
+def get_pos_tagged_from_sentence(
+    ref_text, stride, pred_answer, analyzer
+):
+    """
+    ref_text의 형태소 분석 결과에서 pred_answer에 mapping되는 부분을 반환하며,
+    mapping 과정에서 IndexError가 발생할 경우 get_pos_tagged_from_word로 반환합니다.
+
+    Args:
+        ref_text ([str]): text obtained by more stride based on pred_answer in context.
+        stride ([int]): based on pred_answer, how many chars will be fetched from side to side in the context.
+        pred_answer ([str]): predicted answer.
+        analyzer ([type]): part-of-speech tagger(kaiii, mecab, okt, kkma, komoran).
+    """
+    
     ref_text_pos = analyzer.pos(ref_text)
     ref_text_reverse = list(ref_text)[::-1]
     ref_to_pos_idx = []
@@ -106,12 +142,24 @@ def get_pos_tagged_from_sentence(ref_text, stride, pred_answer, analyzer):
         else:
             pos_tagged_answer = get_pos_tagged_from_word(pred_answer, analyzer)
             
-    except:
+    except IndexError:
         pos_tagged_answer = get_pos_tagged_from_word(pred_answer, analyzer)
 
     return pos_tagged_answer
 
-def get_pos_ensemble(pred_answer, ref_text, stride):
+def get_pos_ensemble(
+    pred_answer, ref_text, stride
+):
+    """
+    pred_answer가 조사로 끝나는지 형태소 분석 앙상블 결과를 토대로 결정하여,
+    조사로 끝날 경우 해당 조사를 제거하여 반환합니다.
+
+    Args:
+        pred_answer ([str]): predicted answer.
+        ref_text ([str]): text obtained by more stride based on pred_answer in context.
+        stride ([int]): based on pred_answer, how many chars will be fetched from side to side in the context.
+    """
+    
     kaiii = KhaiiiApi()
     mecab = Mecab()
     okt = Okt()
@@ -140,13 +188,25 @@ def get_pos_ensemble(pred_answer, ref_text, stride):
         
     return pred_answer
     
-def pred_answer_post_process(context, offsets):
+def pred_answer_post_process(
+    context, offsets
+):
+    """
+    후처리 기능 main 함수로 pred_answer에 대한 전처리를 진행한 후,
+    get_pos_ensemble, make_bracket_pair를 거쳐 결과를 반환합니다.
+
+    Args:
+        context ([str]): context referenced to get pred_answer.
+        offsets (List[int]): index for finding a location in context based on tokenizer index.
+    """
+    
     pred_answer = context[offsets[0] : offsets[1]]
     
     if pred_answer.startswith(' '):
         offsets[0] += 1
     if pred_answer.endswith(' '):
         offsets[1] -= 1
+        
     pred_answer = pred_answer.strip()
     
     stride = 15
@@ -187,8 +247,10 @@ def save_pred_json(
     output_dir에 prediction.json, nbest_predctions.json을 저장합니다.
     
     Args:
-        all_predictions ([type]): [description]
-        all_nbest_json ([type]): [description]
+        all_predictions ([Dict]): total prediction to be updated.
+        all_nbest_json ([Dict]): total prediction of nbest size to be updated.
+        output_dir ([str]): output directory.
+        prefix ([str]): prefix to distinguish data to be stored.
     """
     
     assert os.path.isdir(output_dir), f"{output_dir} is not a directory."
@@ -224,8 +286,8 @@ def get_all_logits(
     start & end logtis([ndarray], [ndarray])을 리턴합니다.
     
     Args:
-        predictions ([Tuple[ndarray, ndarray]]): start & end logit predictions
-        features ([Dataset]): tokenized & splited datasets
+        predictions ([Tuple[ndarray, ndarray]]): start & end logit predictions.
+        features ([Dataset]): tokenized & splited datasets.
     """
     
     assert (
@@ -248,8 +310,8 @@ def map_features_to_example(
     Dict(key : exmaples index, value : feature indices) 값으로 리턴합니다.
     
     Args:
-        examples ([Dataset]): raw datasets
-        features ([Dataset]): tokenized & splited datasets
+        examples ([Dataset]): raw datasets.
+        features ([Dataset]): tokenized & splited datasets.
     """
     
     # example과 mapping되는 feature 생성
@@ -268,12 +330,12 @@ def get_candidate_preds(
     한 exmaple에 맵핑된 features 중 n_best_size만큼의
     prediction([List[Dict(key : (offset, score, start_logit, end_logit)])을 리턴합니다.
     Args:
-        features ([Dataset]): tokenized & splited datasets
-        feature_indices ([List]): feature indices of one loop exmaple
-        all_start_logits ([ndarray]): all start logits
-        all_end_logits ([ndarray]): all end logits
-        n_best_size ([int]): number of return best predictions
-        max_answer_length ([int]): max span of answer
+        features ([Dataset]): tokenized & splited datasets.
+        feature_indices ([List]): feature indices of one loop exmaple.
+        all_start_logits ([ndarray]): all start logits.
+        all_end_logits ([ndarray]): all end logits.
+        n_best_size ([int]): number of return best predictions.
+        max_answer_length ([int]): max span of answer.
     """
     
     min_null_prediction = None
@@ -363,10 +425,10 @@ def get_example_prediction(
     all_nbest_json에 prediction을 추가하여 리턴합니다.
     
     Args:
-        example ([Dataset]): raw datasets
-        predictions ([List[Dict]]): prediction of one example
-        all_predictions ([Dict]): total prediction to be updated
-        all_nbest_json ([Dict]): total prediction of nbest size to be updated
+        example ([Dataset]): raw datasets.
+        predictions ([List[Dict]]): prediction of one example.
+        all_predictions ([Dict]): total prediction to be updated.
+        all_nbest_json ([Dict]): total prediction of nbest size to be updated.
     """
     # predict text offset mapping & post-processed pred_answer
     context = example["context"]
@@ -393,7 +455,7 @@ def get_example_prediction(
     for prob, pred in zip(probs, predictions):
         pred["probability"] = prob
 
-    # 
+    # predict일 경우 진행
     if do_pos_ensemble:
         predictions[0]["text"] = pred_answer_post_process(context, predictions[0]["offsets"])
     
@@ -430,6 +492,7 @@ def postprocess_qa_predictions(
     """
     Post-processes : qa model의 prediction 값을 후처리하는 함수
     모델은 start logit과 end logit을 반환하기 때문에, 이를 기반으로 original text로 변경하는 후처리가 필요함
+    
     Args:
         examples: 전처리 되지 않은 데이터셋 (see the main script for more information).
         features: 전처리가 진행된 데이터셋 (see the main script for more information).
@@ -495,7 +558,7 @@ def post_processing_function(
     training_args, 
     mode,
 ):
-    if mode == 'predict':
+    if mode == 'predict' and training_args.do_pos_ensemble:
         training_args.do_pos_ensemble = True
     else:
         training_args.do_pos_ensemble = False
