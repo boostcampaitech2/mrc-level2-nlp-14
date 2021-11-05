@@ -2,6 +2,7 @@ import os
 import faiss
 import numpy as np
 import pandas as pd
+import numpy as np
 from tqdm.auto import tqdm
 
 from datasets import Dataset, DatasetDict
@@ -107,4 +108,7 @@ class OutputMixin:
     
     def process_topk_context(self, contexts):
         # self.args에 들어오는 option으로 top-k 처리
+        contexts = "#".join(contexts)
+        contexts = contexts.split('#')
+        contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
         return " ".join(contexts)
