@@ -1,4 +1,5 @@
 import os
+import sys
 import faiss
 import pandas as pd
 import numpy as np
@@ -68,34 +69,23 @@ class OutputMixin:
         """
         Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
         """
-        total = []
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-        model_checkpoint = "bert-base-multilingual-cased"
-
-        tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
-        class BertEncoder(BertPreTrainedModel):
-            def __init__(self, config):
-                super(BertEncoder, self).__init__(config)
-
-                self.bert = BertModel(config)
-                self.init_weights()
-                
-            def forward(self, input_ids, 
-                        attention_mask=None, token_type_ids=None): 
+        #arguement수정 필요
+        if model_args.punctuation == False:
+            device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_args.finetuned_model_name_or_path,
+                use_auth_token=model_args.punct_use_auth_token, 
+                revision=model_args.punct_revision
+                )
             
-                outputs = self.bert(input_ids,
-                                    attention_mask=attention_mask,
-                                    token_type_ids=token_type_ids)
-                
-                pooled_output = outputs[1]
-
-                return pooled_output
-
-        # tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds-aug', use_auth_token=True, revision= 'aug_punctuation_underline')
-        # sentence_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds-aug', use_auth_token=True, revision= 'aug_punctuation_underline').to(device)
+            sentence_encoder = AutoModel.from_pretrained(
+                model_args.finetuned_model_name_or_path, 
+                use_auth_token=model_args.punct_use_auth_token, 
+                revision=model_args.punct_revision
+                ).to(device)
         
-        sentence_encoder = BertEncoder.from_pretrained(model_checkpoint).to(device)
+        total = []
         for idx, example in enumerate(tqdm(query_or_dataset)):
             if doc_contexts:
                 contexts = doc_contexts[idx]
@@ -108,8 +98,7 @@ class OutputMixin:
                 # Retrieve한 Passage의 id, score, context를 반환합니다.
                 "context_id": doc_indices[idx],
                 "context_score": doc_scores[idx],
-                "context": self.process_topk_context_punctuation(contexts, example["question"], sentence_encoder, tokenizer, device)
-                # "context": self.process_topk_context(contexts)
+                "context": self.process_topk_context(contexts, example["question"], sentence_encoder, tokenizer, device)
             }
             # print(tmp['context'])
             if "context" in example.keys() and "answers" in example.keys():
@@ -117,8 +106,7 @@ class OutputMixin:
                 tmp["original_context"] = example["context"]
                 tmp["answers"] = example["answers"]
             total.append(tmp)
-    
-            
+     
         return pd.DataFrame(total)
     
 
@@ -142,50 +130,44 @@ class OutputMixin:
         datasets = Dataset.from_pandas(df, features=features)
         return datasets
 
-    def process_topk_context(self, contexts):
-        contexts = "#".join(contexts)
-        contexts = contexts.split('#')
-        contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
-        return " ".join(contexts)
-    
-    def process_topk_context_punctuation(self, contexts, question, sentence_encoder, tokenizer, device):
-        # self.args에 들어오는 option으로 top-k 처리
-        contexts = "#".join(contexts)
-        contexts = contexts.split('#')
-        contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
-        # if data_args.punctuation == True:
-        #     return " ".join(contexts)
-        # else:
-        q_seqs = tokenizer(question, padding="max_length", truncation=True, max_length=384, return_tensors='pt')
-        p_seqs = tokenizer(contexts, padding="max_length", truncation=True, max_length=384, return_tensors='pt')
 
-        torch.cuda.empty_cache()
+    def process_topk_context(self, contexts, question, sentence_encoder, tokenizer, device, model_args):
+        if model_args.punctuation == False:
+            contexts = "#".join(contexts)
+            contexts = contexts.split('#')
+            contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
+            return " ".join(contexts)
+        else:
+            q_seqs = tokenizer(question, padding="max_length", truncation=True, max_seq_length=model_args.punct_max_seq_length, return_tensors='pt')
+            p_seqs = tokenizer(contexts, padding="max_length", truncation=True, max_seq_length=model_args.punct_max_seq_length, return_tensors='pt')
 
-        p_inputs = {'input_ids': p_seqs['input_ids'].to(device),
-        'attention_mask': p_seqs['attention_mask'].to(device),
-        'token_type_ids': p_seqs['token_type_ids'].to(device)
-        }
-    
-        q_inputs = {'input_ids': q_seqs['input_ids'].to(device),    
-        'attention_mask': q_seqs['attention_mask'].to(device),
-        'token_type_ids': q_seqs['token_type_ids'].to(device)}
+            torch.cuda.empty_cache()
+
+            p_inputs = {'input_ids': p_seqs['input_ids'].to(device),
+            'attention_mask': p_seqs['attention_mask'].to(device),
+            'token_type_ids': p_seqs['token_type_ids'].to(device)
+            }
         
-        sentence_encoder.eval()
+            q_inputs = {'input_ids': q_seqs['input_ids'].to(device),    
+            'attention_mask': q_seqs['attention_mask'].to(device),
+            'token_type_ids': q_seqs['token_type_ids'].to(device)}
+            
+            sentence_encoder.eval()
 
-        with torch.no_grad():
-            p_outputs = sentence_encoder(**p_inputs)
-            q_outputs = sentence_encoder(**q_inputs)
+            with torch.no_grad():
+                p_outputs = sentence_encoder(**p_inputs)
+                q_outputs = sentence_encoder(**q_inputs)
 
-        dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
-        rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
-        topk_sentences = rank[:20].tolist()
+            dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
+            rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
+            topk_sentences = rank[:model_args.top_k_punctuation].tolist()
 
-        new_contexts = []
-        for i, sentence in enumerate(contexts): 
-            if i in topk_sentences:
-                sentence = '^' + sentence + '※'
-                new_contexts.append(sentence)
-            else:
-                new_contexts.append(sentence)
-                
-        return ' '.join(new_contexts)
+            new_contexts = []
+            for i, sentence in enumerate(contexts): 
+                if i in topk_sentences:
+                    sentence = '^' + sentence + '※'
+                    new_contexts.append(sentence)
+                else:
+                    new_contexts.append(sentence)
+
+            return ' '.join(new_contexts)

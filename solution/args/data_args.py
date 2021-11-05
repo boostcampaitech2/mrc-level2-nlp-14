@@ -13,10 +13,6 @@ DATA ARGS의 항목이 너무 많아서 지저분하다.
 @dataclass
 class DataPathArguments(DataArguments):
     """ Arguments related to data. """
-    dataset_name: str = field(
-        default="./data/aistage-mrc/train_dataset", 
-        metadata={"help": "The name of the dataset to use."},
-    )
     dataset_path: str = field(
         default="./data/aistage-mrc",
         metadata={"help": "The path of the dataset stored"},
@@ -45,7 +41,6 @@ class DataPathArguments(DataArguments):
         default="./data/aistage-mrc/train_dataset", 
         metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
     )
-
     
 @dataclass
 class TokenizerArguments(DataPathArguments):
@@ -74,15 +69,7 @@ class TokenizerArguments(DataPathArguments):
         default=False,
         metadata={"help": ""}
     )
-    underline: bool = field(
-        default=False,
-        metadata={"help": "Whether to add underline embedding at the time of tokenizing or not"},
-    )
-    punctuation: bool = field(
-        default=False,
-        metadata={"help": "Whether to add punctuation or not"},
-    )
-    
+
 @dataclass
 class RetrievalArguments(TokenizerArguments):
     retrieval_mode: str = field(
@@ -127,7 +114,6 @@ class RetrievalArguments(TokenizerArguments):
         default=64,
         metadata={"help": "Define how many clusters to use for faiss."}
     )
-
 
 @dataclass
 class ElasticSearchArguments(RetrievalArguments):

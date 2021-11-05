@@ -99,39 +99,6 @@ def get_extractive_features(tokenizer, mode, data_args):
 
         return tokenized_examples
 
-    def remove_special_token(examples):
-        answers = []
-        context = []
-        document_id = []
-        ids = []
-        question = []
-        title = []
-
-        for i in range(len(examples['context'])):    
-            sentence_list = examples['context'][i].split('#')
-            result = sentence_list.copy()
-
-            result = ' '.join(sentence_list)
-            index = result.find('[ANSWER]')
-            result = re.sub('\[ANSWER\]','',result)
-
-            answer = examples['answers'][i]
-            answer['answer_start'][0] = index
-
-            answers.append(answer)
-            context.append(result)
-            document_id.append(examples['document_id'][i])
-            ids.append(examples['id'][i])
-            question.append(examples['question'][i])
-            title.append(examples['title'][i])
-
-        return {'answers': answers,
-                'context': context,
-                'document_id': document_id,
-                'id': ids,
-                'question': question,
-                'title': title}
-
     def prepare_train_features(examples):
         pad_on_right = tokenizer.padding_side == "right"
         # denoising
