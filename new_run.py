@@ -23,6 +23,7 @@ from solution.utils import set_seed, check_no_error
 from transformers import AutoTokenizer
 from transformers.utils import logging
 
+from solution.data.processors.mask import make_emb_dataset
 
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
@@ -50,6 +51,9 @@ def main():
 
     set_seed(training_args.seed)
 
+    if data_args.make_mask:
+        make_emb_dataset(data_args.dataset_path,data_args.masking_type)
+        return
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_path}")
 
@@ -104,7 +108,7 @@ def main():
     logger.warning(f"CHECKPOINT: {checkpoint}")
 
 
-    # curriculum learning setting
+    #curriculum learning setting
     if data_args.curriculum_learn:
         logger.warning(f"load from checkpoint {checkpoint}")
         ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
@@ -158,5 +162,5 @@ def main():
     #     Analyzer.post(report)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":   
     main()

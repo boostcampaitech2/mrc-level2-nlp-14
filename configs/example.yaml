@@ -1,10 +1,12 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_path: ./data/v300/aistage-mrc
+  dataset_path: ./data/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
+  make_mask: True
+  masking_type: "mask"
   curriculum_split_name: train
   curriculum_learn: False
   dataset_version: v1.3.1
