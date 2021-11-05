@@ -14,9 +14,6 @@ from ..modeling_heads import (
     QAConvHead,
 )
 
-import numpy as np
-import torch
-from torch.nn import CrossEntropyLoss
 
 class RobertaForQA(RobertaForQuestionAnswering):
     reader_type: str = "extractive"
