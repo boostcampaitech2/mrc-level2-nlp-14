@@ -7,6 +7,7 @@ from .base import DenseRetrieval
 from solution.utils.constant import Q_ENCODER_NAME, P_ENCODER_NAME
 
 class BertEncoder(BertPreTrainedModel):
+    """ Bert Encoder for query or passage embedding """
     def __init__(self, config):
         super(BertEncoder, self).__init__(config)
 
@@ -26,6 +27,7 @@ class BertEncoder(BertPreTrainedModel):
 
 
 class DensePassageRetrieval(DenseRetrieval):
+    """ Dense Passage Retrieval """
     def __init__(self, args: DataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
         self.q_encoder = torch.load(os.path.join(args.retrieval_model_path, f"{Q_ENCODER_NAME}.pt"))
@@ -40,5 +42,14 @@ class DensePassageRetrieval(DenseRetrieval):
         self.args.use_faiss = False # faiss를 사용하지 않음
     
     def calculate_scores(self, q_embeddings, p_embeddings):
+        """ Calculate similarity scores between query and passage embeddings
+
+        Args:
+            q_embeddings (torch.Tensor): query embeddings from query encoder
+            p_embeddings (torch.Tensor): passage embeddings from passage encoder
+
+        Returns:
+            torch.Tensor: similarity scores (num_queries, num_passages)
+        """
         dot_prod_scores = torch.matmul(q_embeddings, torch.transpose(p_embeddings, 0, 1))
         return dot_prod_scores

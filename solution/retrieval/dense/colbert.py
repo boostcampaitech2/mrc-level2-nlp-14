@@ -11,6 +11,7 @@ from solution.utils.constant import COLBERT_NAME
 
 
 class ColBERTEncoder(BertPreTrainedModel):
+    """ ColBERT Encoder for query or passage embedding """
     def __init__(self, config, mask_punctuation, dim=128, similarity_metric="cosine"):
         super(ColBERTEncoder, self).__init__(config)
 
@@ -34,9 +35,11 @@ class ColBERTEncoder(BertPreTrainedModel):
         self.init_weights()
 
     def forward(self, Q, D):
+        """ Return similarity score between Q and D using score function """
         return self.score(Q, D)
 
     def query(self, input_ids, attention_mask, token_type_ids=None):
+        """ Return query embeddings """
         input_ids, attention_mask = input_ids.to("cuda"), attention_mask.to("cuda")
         Q = self.bert(input_ids, attention_mask=attention_mask)[0]
         Q = self.linear(Q)
@@ -44,6 +47,7 @@ class ColBERTEncoder(BertPreTrainedModel):
         return torch.nn.functional.normalize(Q, p=2, dim=2)
 
     def doc(self, input_ids, attention_mask, token_type_ids=None, keep_dims=True):
+        """ Return document(passage) embeddings """
         input_ids, attention_mask = input_ids.to("cuda"), attention_mask.to("cuda")
         D = self.bert(input_ids, attention_mask=attention_mask)[0]
         D = self.linear(D)
@@ -60,6 +64,15 @@ class ColBERTEncoder(BertPreTrainedModel):
         return D
 
     def score(self, Q, D):
+        """ Return similarity score between Q and D
+
+        Args:
+            Q (torch.Tensor): query embeddings
+            D (torch.Tensor): document(passage) embeddings
+
+        Returns:
+            torch.Tensor: similarity score
+        """
         if self.similarity_metric == "cosine":
             return (Q.float() @ D.float().permute(0, 2, 1)).max(2).values.sum(1)
 
@@ -72,6 +85,7 @@ class ColBERTEncoder(BertPreTrainedModel):
 
 
 class ColBERTRetrieval(DenseRetrieval):
+    """ ColBERT Retrieval """
     def __init__(self, args: DataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
         self.colbert = torch.load(os.path.join(args.retrieval_model_path, f"{COLBERT_NAME}.pt"))
@@ -85,6 +99,15 @@ class ColBERTRetrieval(DenseRetrieval):
         self.args.use_faiss = False # faiss를 사용하지 않음
 
     def calculate_scores(self, q_embeddings, p_embeddings):
+        """ Calculate similarity scores between query and passage embeddings
+
+        Args:
+            q_embeddings (torch.Tensor): query embeddings from ColBERT
+            p_embeddings (torch.Tensor): passage embeddings from ColBERT
+
+        Returns:
+            torch.Tensor: similarity scores (num_queries, num_passages)
+        """
         batch_size = 16
         N = len(p_embeddings)
         q = N // batch_size
