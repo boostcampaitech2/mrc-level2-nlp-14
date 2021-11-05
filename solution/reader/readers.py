@@ -25,12 +25,6 @@ class GenerativeReader(ReaderBase):
     default_trainer: BaseTrainer = QuestionAnsweringSeq2SeqTrainer
 
 
-class UnderlineReader(ReaderBase):
-    reader_type: str = "underline"
-    default_model: PreTrainedModel = None
-    default_trainer: BaseTrainer = None
-
-
 class EnsembleReader(ReaderBase):
     reader_type: str = "ensemble"
     default_model: PreTrainedModel = AutoModelForSeq2SeqLM
