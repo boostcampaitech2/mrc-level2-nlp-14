@@ -79,12 +79,16 @@ def main():
     eval_features, eval_datasets = convert_examples_to_features(
         processor, tokenizer, mode="eval")
     
-    data_collator = None
-    if not data_args.pad_to_max_length:
-        data_callator_cls = DATA_COLLATOR[model_args.reader_type]
+    data_callator_cls = DATA_COLLATOR[model_args.reader_type]
+    if model_args.reader_type in ["generative", "ensemble"]:
         data_collator = data_callator_cls(
             tokenizer=tokenizer,
-            label_pad_token_id=tokenizer.pad_token_id if model_args.reader_type in ["generative", "ensemble"] else None,
+            label_pad_token_id=tokenizer.pad_token_id,
+            pad_to_multiple_of=8 if training_args.fp16 else None,
+        )
+    else:
+        data_collator = data_callator_cls(
+            tokenizer=tokenizer,
             pad_to_multiple_of=8 if training_args.fp16 else None,
         )
 

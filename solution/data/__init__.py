@@ -8,5 +8,4 @@ DATA_COLLATOR = {
     "extractive": DataCollatorWithPadding,
     "generative": DataCollatorForSeq2Seq,
     "ensemble": DataCollatorForSeq2Seq,
-    "retro": DataCollatorWithPadding,
 }
