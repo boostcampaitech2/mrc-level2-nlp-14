@@ -5,7 +5,7 @@ DataArguments:
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
-  make_mask: True
+  make_mask: False
   masking_type: "mask"
   curriculum_split_name: train
   curriculum_learn: False
