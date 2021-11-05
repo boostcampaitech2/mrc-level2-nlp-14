@@ -77,11 +77,15 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def get_underline_embedding(tokenized_examples):
+
         underline_ids = np.zeros_like(tokenized_examples['input_ids'])
+
         punct_start_token = '^'
         punct_end_token = '※'
+
         punct_start_id = tokenizer.convert_tokens_to_ids(punct_start_token)
         punct_end_id = tokenizer.convert_tokens_to_ids(punct_end_token)
+
         for i, row in enumerate(tokenized_examples['input_ids']):
             if punct_start_id in row and punct_end_id in row:
                 punct_start = row.index(punct_start_id)
@@ -89,6 +93,7 @@ def get_extractive_features(tokenizer, mode, data_args):
                 underline_ids[i][punct_start+1:punct_end] = 1
             else:
                 continue
+
         underline_ids = underline_ids.tolist()
         tokenized_examples.update({"underline_ids": underline_ids})
 
@@ -140,9 +145,6 @@ def get_extractive_features(tokenizer, mode, data_args):
 
         if data_args.underline == True:
             tokenized_examples = get_underline_embedding(tokenized_examples)
-
-
-
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
         offset_mapping = tokenized_examples.pop("offset_mapping")
