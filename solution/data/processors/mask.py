@@ -1,4 +1,3 @@
-### >>> 진규님 라이브러리 디펜던시
 import os
 import torch
 import pickle
