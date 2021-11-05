@@ -78,7 +78,10 @@ class TokenizerArguments(DataPathArguments):
         default=False,
         metadata={"help": "Whether to add underline embedding at the time of tokenizing or not"},
     )
-   
+    punctuation: bool = field(
+        default=False,
+        metadata={"help": "Whether to add punctuation or not"},
+    )
     
 @dataclass
 class RetrievalArguments(TokenizerArguments):

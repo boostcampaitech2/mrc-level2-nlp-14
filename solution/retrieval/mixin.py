@@ -5,13 +5,19 @@ import numpy as np
 from tqdm.auto import tqdm
 import torch
 from datasets import Dataset, DatasetDict
-from transformers import AutoModel, AutoTokenizer
+from transformers import AutoModel, AutoTokenizer, BertPreTrainedModel, BertModel
 from solution.utils.constant import (
     MRC_EVAL_FEATURES,
     MRC_PREDICT_FEATURES
 )
-
-
+from tqdm import tqdm
+from solution.args import (
+    HfArgumentParser,
+    MrcDataArguments,
+    MrcModelArguments,
+    MrcTrainingArguments,
+    MrcProjectArguments,
+)
 
 class FaissMixin:
     
@@ -63,8 +69,34 @@ class OutputMixin:
         Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
         """
         total = []
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+
+        model_checkpoint = "bert-base-multilingual-cased"
+
+        tokenizer = AutoTokenizer.from_pretrained(model_checkpoint)
+        class BertEncoder(BertPreTrainedModel):
+            def __init__(self, config):
+                super(BertEncoder, self).__init__(config)
+
+                self.bert = BertModel(config)
+                self.init_weights()
+                
+            def forward(self, input_ids, 
+                        attention_mask=None, token_type_ids=None): 
+            
+                outputs = self.bert(input_ids,
+                                    attention_mask=attention_mask,
+                                    token_type_ids=token_type_ids)
+                
+                pooled_output = outputs[1]
+
+                return pooled_output
+
+        # tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds-aug', use_auth_token=True, revision= 'aug_punctuation_underline')
+        # sentence_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds-aug', use_auth_token=True, revision= 'aug_punctuation_underline').to(device)
         
-        for idx, example in enumerate(query_or_dataset):
+        sentence_encoder = BertEncoder.from_pretrained(model_checkpoint).to(device)
+        for idx, example in enumerate(tqdm(query_or_dataset)):
             if doc_contexts:
                 contexts = doc_contexts[idx]
             else:
@@ -76,16 +108,20 @@ class OutputMixin:
                 # Retrieve한 Passage의 id, score, context를 반환합니다.
                 "context_id": doc_indices[idx],
                 "context_score": doc_scores[idx],
-                "context": self.process_topk_context_punctuation(contexts, example["question"])
+                "context": self.process_topk_context_punctuation(contexts, example["question"], sentence_encoder, tokenizer, device)
+                # "context": self.process_topk_context(contexts)
             }
+            # print(tmp['context'])
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환
                 tmp["original_context"] = example["context"]
                 tmp["answers"] = example["answers"]
             total.append(tmp)
+    
             
         return pd.DataFrame(total)
     
+
     def dataframe_to_datasetdict(
         self,
         df: pd.DataFrame,
@@ -112,38 +148,37 @@ class OutputMixin:
         contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
         return " ".join(contexts)
     
-    def process_topk_context_punctuation(self, contexts, question):
+    def process_topk_context_punctuation(self, contexts, question, sentence_encoder, tokenizer, device):
         # self.args에 들어오는 option으로 top-k 처리
         contexts = "#".join(contexts)
         contexts = contexts.split('#')
         contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
-
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-        tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
-        p_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
-        q_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
-        
-        q_seqs = tokenizer(question, padding="max_length", truncation=True, return_tensors='pt')
-        p_seqs = tokenizer(contexts, padding="max_length", truncation=True, return_tensors='pt')
+        # if data_args.punctuation == True:
+        #     return " ".join(contexts)
+        # else:
+        q_seqs = tokenizer(question, padding="max_length", truncation=True, max_length=384, return_tensors='pt')
+        p_seqs = tokenizer(contexts, padding="max_length", truncation=True, max_length=384, return_tensors='pt')
 
         torch.cuda.empty_cache()
 
         p_inputs = {'input_ids': p_seqs['input_ids'].to(device),
-          'attention_mask': p_seqs['attention_mask'].to(device),
-          'token_type_ids': p_seqs['token_type_ids'].to(device)
-          }
-      
+        'attention_mask': p_seqs['attention_mask'].to(device),
+        'token_type_ids': p_seqs['token_type_ids'].to(device)
+        }
+    
         q_inputs = {'input_ids': q_seqs['input_ids'].to(device),    
-          'attention_mask': q_seqs['attention_mask'].to(device),
-          'token_type_ids': q_seqs['token_type_ids'].to(device)}
+        'attention_mask': q_seqs['attention_mask'].to(device),
+        'token_type_ids': q_seqs['token_type_ids'].to(device)}
+        
+        sentence_encoder.eval()
 
-        p_outputs = p_encoder(**p_inputs)[1]
-        q_outputs = q_encoder(**q_inputs)[1]
+        with torch.no_grad():
+            p_outputs = sentence_encoder(**p_inputs)
+            q_outputs = sentence_encoder(**q_inputs)
 
         dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
         rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
-        topk_sentences = rank[:5].tolist()
+        topk_sentences = rank[:20].tolist()
 
         new_contexts = []
         for i, sentence in enumerate(contexts): 
@@ -152,5 +187,5 @@ class OutputMixin:
                 new_contexts.append(sentence)
             else:
                 new_contexts.append(sentence)
-
+                
         return ' '.join(new_contexts)

@@ -1,12 +1,13 @@
 DataArguments:
 
   # DataPathArguments
-  dataset_name: ./data/aistage-mrc/train_punctuation
+  dataset_name: ./data/aistage-mrc/train_aug_punctuation
   dataset_path: ./data/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
-  dataset_version: v4.0.2
+  curriculum_learn: False
+  dataset_version: v4.1.1
   
   # TokenizerArguments
   max_seq_length: 384
@@ -14,16 +15,17 @@ DataArguments:
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
-  underline: False
-  
+  underline: True
+  # punctuation: True
+
   # RetrievalArguments
   retrieval_mode: elastic_engine
   retrieval_name: elastic_search
-  rebuilt_index: True
-  retrieval_tokenizer_name: mecab
+  rebuilt_index: False
+  retrieval_tokenizer_name: mecab0
   sp_max_features: 50000
   sp_ngram_range: [1,2]
-  top_k_retrieval: 35
+  top_k_retrieval: 15
   use_faiss: False
   eval_retrieval: True
   num_clusters: 64
@@ -58,16 +60,13 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
-  # model_name_or_path: klue/bert-base
-  # model_name_or_path: kiyoung2/roberta-large-qaconv-sds-aug
-  model_name_or_path: klue/roberta-large
+  model_name_or_path: kiyoung2/roberta-large-qaconv-sds-aug
   reader_type: extractive
-  # architectures: RobertaForQA
-  architectures: RobertaForQAWithConvSDSHead
-  # architectures: RobertaForQAWithUnderline
+  architectures: RobertaForQAWithUnderline
   config_name: null
   tokenizer_name: null
-  model_cache_dir: cache
+  # model_cache_dir: cache
+  model_cache_dir: None
   model_init: qaconv_head
 
   
@@ -77,20 +76,21 @@ ModelArguments:
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
   use_auth_token: True
+  revision: 'aug_punctuation_underline'
   
 TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
-  run_name: no_aug_train_valid_test_punctuation_only
-  output_dir: outputs/no_aug_train_valid_test_punctuation_only
+  run_name: underline_punctuation
+  output_dir: outputs/underline_punctuation
   overwrite_output_dir: False
   learning_rate: 2e-6
-  do_train: True
+  do_train: Tre
   do_eval: True
-  do_predict: True # eval_retrieval = True 필수
-  evaluation_strategy: steps
-  save_strategy: steps
+  do_predict: True # eval_retrieval : True 필수
+  evaluation_strategy: steps # do_eval이 Fasle일 때 : 'no'
+  save_strategy: steps # do_eval이 Fasle일 때 : 'no'
   per_device_train_batch_size: 16
   per_device_eval_batch_size: 16
   num_train_epochs: 3

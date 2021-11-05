@@ -39,8 +39,10 @@ def _get_model(
         model_args.model_name_or_path,
         config=config,
         use_auth_token=model_args.use_auth_token,
+        # use_auth_token="izFmqZpEsuOHWxlgLfMVTiFlSwDyacEAzcstyrfWhSHAghVPTbDHuRbIebNLOhhqXqPkhEmDffWbiJVkmiJlBIwHtHXOzsbuHUqRlWHreAFWUHQWnujDWeBqquTRERQb",
+        revision=model_args.revision,
     )
-    return model    
+    return model
 
 
 def basic(
