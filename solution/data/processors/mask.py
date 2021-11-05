@@ -18,12 +18,6 @@ import re
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-def save_pickle(file_name, data_set):
-    """Save dataset as a pickle file."""
-    file=open(file_name,"wb")
-    pickle.dump(data_set,file)
-    file.close()
-    
 def cosine_similarity(A, B):
     """Calculate cosine similarity between A and B"""
     return dot(A, B) / (norm(A) * norm(B))
@@ -62,7 +56,7 @@ def get_masked_dataset_with_ST(train_data_path):
         'validation': tokenized_valid_dataset
     })
     
-    save_pickle("./test.pkl", new_dataset)
+    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked_ST")
     
     return new_dataset
 
@@ -201,7 +195,7 @@ def make_question_random_masking(train_data_path):
         'validation': val_dataset
     })
     
-    save_pickle('./test11.pkl', new_dataset)
+    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_random_masked")
     
     return new_dataset
 
@@ -274,7 +268,7 @@ def make_emb_dataset(dataset_path, mode):
         'validation':raw_val_dataset
     })
     
-    save_pickle("./test123.pkl", new_dataset)
+    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked")
     
     return new_dataset
 
