@@ -6,5 +6,4 @@ POST_PROCESSING_FUNCTION = {
     "extractive": post_processing_function,
     "generative": gen_postprocessing_function,
     "ensemble": gen_postprocessing_function,
-    "retro": post_processing_function,
 }
