@@ -6,19 +6,13 @@ import numpy as np
 from tqdm.auto import tqdm
 import torch
 from datasets import Dataset, DatasetDict
-from transformers import AutoModel, AutoTokenizer, BertPreTrainedModel, BertModel
+from transformers import AutoModel, AutoTokenizer
 from solution.utils.constant import (
     MRC_EVAL_FEATURES,
     MRC_PREDICT_FEATURES
 )
 from tqdm import tqdm
-from solution.args import (
-    HfArgumentParser,
-    MrcDataArguments,
-    MrcModelArguments,
-    MrcTrainingArguments,
-    MrcProjectArguments,
-)
+
 
 class FaissMixin:
     
@@ -60,29 +54,29 @@ class FaissMixin:
 class OutputMixin:
     
     def get_dataframe_result(
-        self, 
+        self,
         query_or_dataset, 
-        doc_scores, 
+        doc_scores,
         doc_indices,
         doc_contexts=None,
     ) -> pd.DataFrame:
         """
         Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
         """
-
+    
         #arguement수정 필요
-        if model_args.punctuation == False:
+        if self.args.do_punctuation == False:
             device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
             tokenizer = AutoTokenizer.from_pretrained(
-                model_args.finetuned_model_name_or_path,
-                use_auth_token=model_args.punct_use_auth_token, 
-                revision=model_args.punct_revision
+                self.args.punct_model_name_or_path,
+                use_auth_token=self.args.punct_use_auth_token, 
+                revision=self.args.punct_revision
                 )
-            
+        
             sentence_encoder = AutoModel.from_pretrained(
-                model_args.finetuned_model_name_or_path, 
-                use_auth_token=model_args.punct_use_auth_token, 
-                revision=model_args.punct_revision
+                self.args.punct_model_name_or_path, 
+                use_auth_token=self.args.punct_use_auth_token, 
+                revision=self.args.punct_revision
                 ).to(device)
         
         total = []
@@ -131,15 +125,27 @@ class OutputMixin:
         return datasets
 
 
-    def process_topk_context(self, contexts, question, sentence_encoder, tokenizer, device, model_args):
-        if model_args.punctuation == False:
+    def process_topk_context(self, contexts, question, sentence_encoder, tokenizer, device):
+        if self.args.do_punctuation == False:
             contexts = "#".join(contexts)
             contexts = contexts.split('#')
             contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
             return " ".join(contexts)
         else:
-            q_seqs = tokenizer(question, padding="max_length", truncation=True, max_seq_length=model_args.punct_max_seq_length, return_tensors='pt')
-            p_seqs = tokenizer(contexts, padding="max_length", truncation=True, max_seq_length=model_args.punct_max_seq_length, return_tensors='pt')
+            q_seqs = tokenizer(
+                question, 
+                padding="max_length", 
+                truncation=True, 
+                max_seq_length=self.args.punct_max_seq_length, 
+                return_tensors='pt'
+                )
+            p_seqs = tokenizer(
+                contexts, 
+                padding="max_length", 
+                truncation=True, 
+                max_seq_length=self.args.punct_max_seq_length, 
+                return_tensors='pt'
+                )
 
             torch.cuda.empty_cache()
 
@@ -159,8 +165,8 @@ class OutputMixin:
                 q_outputs = sentence_encoder(**q_inputs)
 
             dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
-            rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
-            topk_sentences = rank[:model_args.top_k_punctuation].tolist()
+            rank = torch.self.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
+            topk_sentences = rank[:self.args.top_k_punctuation].tolist()
 
             new_contexts = []
             for i, sentence in enumerate(contexts): 

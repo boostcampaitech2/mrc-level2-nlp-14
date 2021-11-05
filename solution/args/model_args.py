@@ -63,44 +63,6 @@ class ModelingArguments(ModelArguments):
 
 
 @dataclass
-class HighlightingArguments(ModelArguments):
-
-    underline: bool = field(
-        default=False,
-        metadata={"help": "Whether to add underline embedding at the time of tokenizing or not"},
-    )
-    punctuation: bool = field(
-        default=False,
-        metadata={"help": "Whether to add punctuation or not"},
-    )
-    punct_model_name_or_path: str = field(
-        default="'kiyoung2/roberta-large-qaconv-sds-aug'",
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
-    )
-    max_seq_length: int = field(
-        default=100,
-        metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
-        },
-    )
-    punct_use_auth_token: bool = field(
-        default=False,
-        metadata={"help": ""}
-    )
-    punct_revision: str = field(
-        default="main",
-        metadata={"help": ""}
-    )
-    top_k_retrieval: int = field(
-        default=10,
-        metadata={
-            "help": "Define how many top-k sentences to retrieve based on similarity."
-        },
-    )
-
-    
-@dataclass
 class ModelHeadArguments(ModelingArguments):
     # 어떻게 구분지을지 고민하기
     model_head: str = field(

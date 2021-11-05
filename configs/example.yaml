@@ -16,15 +16,12 @@ DataArguments:
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
-  # underline: True
-  # punctuation: True
-  # top_k_punctuation: 10
 
   # HightlightingArguments
-  underline: True
-  punctuation: True
+  do_underline: False
+  do_punctuation: False
   top_k_punctuation: 10
-  punct_model_name_or_path: 'kiyoung2/roberta-large-qaconv-sds-aug'
+  punct_model_name_or_path: ./outputs/run_test
   punct_use_auth_token: True
   punct_revision: main
   punct_max_seq_length : 100
@@ -32,7 +29,7 @@ DataArguments:
   # RetrievalArguments
   retrieval_mode: elastic_engine
   retrieval_name: elastic_search
-  rebuilt_index: False
+  rebuilt_index: True
   retrieval_tokenizer_name: mecab0
   sp_max_features: 50000
   sp_ngram_range: [1,2]
@@ -71,12 +68,12 @@ DataArguments:
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: kiyoung2/roberta-large-qaconv-sds-aug
+  model_name_or_path: klue/roberta-large
   reader_type: extractive
-  architectures: RobertaForQAWithUnderline
+  architectures: RobertaForQAWithConvSDSHead
   config_name: null
   tokenizer_name: null
-  # model_cache_dir: cache
+  model_cache_dir: cache
   model_cache_dir: None
   model_init: qaconv_head
   use_auth_token: True
@@ -87,6 +84,7 @@ ModelArguments:
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
+  use_auth_token: Fasle
   
 TrainingArguments:
 
@@ -96,7 +94,7 @@ TrainingArguments:
   output_dir: outputs/run_test
   overwrite_output_dir: False
   learning_rate: 2e-6
-  do_train: Tre
+  do_train: True
   do_eval: True
   do_predict: True # eval_retrieval = True 필수
   evaluation_strategy: steps # do_eval이 False일 때 'no'로 설정

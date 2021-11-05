@@ -17,7 +17,8 @@ class QATrainingArguments(TrainingArguments):
         default=False,
         metadata={"help": "Whether to use Part-of-Speech in train"},
     )
-    
+
+
 @dataclass
 class Seq2SeqTrainingArguments(QATrainingArguments):
     sortish_sampler: bool = field(

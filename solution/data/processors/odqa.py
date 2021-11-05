@@ -60,8 +60,7 @@ def convert_examples_to_features(
             num_proc=processor.data_args.preprocessing_num_workers,
             load_from_cache_file=not processor.data_args.overwrite_cache,
         )
-
-            
+        
     return features, dataset
 
 
@@ -77,11 +76,10 @@ class OdqaProcessor(DataProcessor):
 
     def get_eval_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset_aug2"))["validation"]
+        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["validation"]
         return input_data
 
     def get_test_examples(self):
         dataset_path = self.data_args.dataset_path
         input_data = load_from_disk(os.path.join(dataset_path, "test_dataset"))["validation"]
-        return input_data
-        
+        return input_data 
