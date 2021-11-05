@@ -83,14 +83,18 @@ class ColBERTRetrieval(DenseRetrieval):
         self.enable_batch = False # batch 사용 불가
         self.args.use_faiss = False # faiss를 사용하지 않음
 
-    def calculate_scores(self, query_embedding, passage_embedding):
+    def calculate_scores(self, q_embeddings, p_embeddings):
         batch_size = 16
-        N = len(passage_embedding)
+        N = len(p_embeddings)
         q = N // batch_size
         N_batch = batch_size * q
         scores = []
         for i in range(0, N_batch, batch_size):
-            p_emb = passage_embedding[i:i+batch_size]
-            score = self.colbert(query_embedding.unsqueeze(dim=0), p_emb)
+            p_emb = p_embeddings[i:i+batch_size]
+            score = self.colbert(q_embeddings.unsqueeze(dim=0), p_emb)
+            scores.append(score)
+        else:
+            p_emb = p_embeddings[i+batch_size:]
+            score = self.colbert(q_embeddings.unsqueeze(dim=0), p_emb)
             scores.append(score)
         return torch.cat(scores)
