@@ -46,9 +46,16 @@ class RobertaForQAWithConvSDSHead(RobertaForQuestionAnswering):
         
 
 class RobertaForQAWithConvHead(RobertaPreTrainedModel):
+    """
+    Roberta model for QA with conv head
+    """
     reader_type: str = "extractive"
     
     def __init__(self, config):
+        """
+        Args:
+            config (ModelArguments): ModelArguments
+        """
         super().__init__(config)
         assert config.reader_type == self.reader_type
         assert hasattr(config, "sep_token_id")

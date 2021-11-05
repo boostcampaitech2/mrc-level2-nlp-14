@@ -12,6 +12,15 @@ DENOISE_FUNC = {
 }
 
 def remove_special_token(examples):
+    """
+    Remove special tokens in data v3
+
+    Args:
+        examples (Dict[Any]): DatasetDict
+
+    Returns:
+        Dict[Any]: DatasetDict
+    """
     answers = []
     context = []
     document_id = []
@@ -156,6 +165,7 @@ def get_extractive_features(tokenizer, mode, data_args):
     def prepare_validation_features(examples, retriever=None):
         pad_on_right = tokenizer.padding_side == "right"
 
+        # odqa.py 에서 v3 설명 참조. dataset version이 v3.*.*이고 retrieval 하지 않을 때 실행
         if ('v3' in data_args.dataset_version) & (retriever is None):
             examples = remove_special_token(examples)
 

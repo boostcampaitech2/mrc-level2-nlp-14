@@ -53,6 +53,7 @@ def convert_examples_to_features(
         load_from_cache_file=not processor.data_args.overwrite_cache,
     )
 
+    # v3: train context에 #, [ANSWER] 등 special token이 포함되어 있는 v3.*.* 버전의 데이터
     if ('v3' in processor.data_args.dataset_version) & (retriever is None) & (mode != "test"):
         dataset = dataset.map(
             remove_special_token,
