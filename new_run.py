@@ -10,11 +10,12 @@ from solution.args import (
     MrcTrainingArguments,
     MrcProjectArguments,
 )
+from solution.data import DATA_COLLATOR
 from solution.data.metrics import compute_metrics
 from solution.data.processors import (
     OdqaProcessor,
     convert_examples_to_features,
-    post_processing_function,
+    POST_PROCESSING_FUNCTION,
 )
 from solution.reader import READER_HOST
 from solution.retrieval import RETRIEVAL_HOST
@@ -78,6 +79,21 @@ def main():
     eval_features, eval_datasets = convert_examples_to_features(
         processor, tokenizer, mode="eval")
     
+    data_callator_cls = DATA_COLLATOR[model_args.reader_type]
+    if model_args.reader_type in ["generative", "ensemble"]:
+        data_collator = data_callator_cls(
+            tokenizer=tokenizer,
+            label_pad_token_id=tokenizer.pad_token_id,
+            pad_to_multiple_of=8 if training_args.fp16 else None,
+        )
+    else:
+        data_collator = data_callator_cls(
+            tokenizer=tokenizer,
+            pad_to_multiple_of=8 if training_args.fp16 else None,
+        )
+
+    post_processing_func = POST_PROCESSING_FUNCTION[model_args.reader_type]
+
     reader.set_trainer(
         model_init=reader.model_init,
         args=training_args,
@@ -86,7 +102,8 @@ def main():
         eval_examples=eval_datasets,
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
-        post_process_function=post_processing_function,
+        data_collator=data_collator,
+        post_process_function=post_processing_func,
     )
 
     last_checkpoint, data_args.max_seq_length = check_no_error(
@@ -102,7 +119,6 @@ def main():
         elif os.path.isdir(reader.model_args.model_name_or_path):
             checkpoint = model_args.model_name_or_path
     logger.warning(f"CHECKPOINT: {checkpoint}")
-
 
     # curriculum learning setting
     if data_args.curriculum_learn:

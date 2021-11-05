@@ -67,7 +67,6 @@ def add_qaconv_head(
     elif "conv" in model_args.model_head:
         _set_attr(config, "qa_conv_out_channel", model_args)
         _set_attr(config, "model_head", model_args)
-        # _set_attr(config, "sep_token_id", tokenizer)
         setattr(config, "sep_token_id", tokenizer.sep_token_id)
 
     model = _get_model(model_args, default_model, config)
