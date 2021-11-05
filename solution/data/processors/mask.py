@@ -22,43 +22,91 @@ def cosine_similarity(A, B):
     """Calculate cosine similarity between A and B"""
     return dot(A, B) / (norm(A) * norm(B))
 
-def get_masked_dataset_with_ST(train_data_path):
-    """Masking on the context by using sentence transformer."""
-    tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
+def get_masking_features(examples, tokenizer):
+    """Create dataset for random masking."""
+    new_tokenized_ids=[]
+    new_att =[]
+    new_token_type=[]
+    new_answer = []
     
-    raw_train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
-    raw_val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
-    column_names=raw_train_dataset.column_names
+    texts = [text['text'][0] for text in examples['answers']]
     
+    tokenized_q = tokenizer(examples['question'], return_tensors='pt', truncation=True, max_length=384, padding="max_length")
+    tokenized_c = tokenizer(examples['context'], return_tensors='pt', truncation=True, max_length=384, stride=128,return_overflowing_tokens=True,return_offsets_mapping=True,padding="max_length")
+    tokenized_a = tokenizer(texts, return_tensors='pt', max_length=100, padding="max_length")
     
-    _ext_prepare_train_features = partial(get_extractive_features, tokenizer=tokenizer, mode="train")
+    sample_mapping = tokenized_c.pop("overflow_to_sample_mapping")
     
-    tokenized_train_dataset = raw_train_dataset.map(
-        _ext_prepare_train_features,
-        batched=True,
-        #num_proc=4,
-        remove_columns=column_names,
-    )
+    for i in tqdm(sample_mapping):
+        new_tokenized_ids.append(tokenized_q['input_ids'][i].tolist())
+        new_att.append(tokenized_q['attention_mask'][i].tolist())
+        new_token_type.append(tokenized_q['token_type_ids'][i].tolist())
+        new_answer.append(tokenized_a['input_ids'][i].tolist())
     
-    _ext_prepare_validation_features = partial(get_extractive_features, tokenizer=tokenizer, mode="eval")
+    return { 'ids':new_tokenized_ids, 
+            'attention':new_att, 
+            'token_type':new_token_type, 
+            'answer':new_answer }
+            
+def make_hard_word(tokenizer, ids, answer, idx):
+    """find confusing words for adding"""
     
-    tokenized_valid_dataset = raw_val_dataset.map(
-        _ext_prepare_validation_features,
-        batched=True,
-        #num_proc=4,
-        remove_columns=column_names,
-    )
+    front_idx = int(idx)
+    back_idx = int(idx)
     
-    masked_dataset = mask_span_unit(tokenized_train_dataset, tokenizer)
+    tokens = tokenizer.convert_ids_to_tokens(ids)
     
-    new_dataset = DatasetDict({
-        'train': masked_dataset,
-        'validation': tokenized_valid_dataset
-    })
+    while True:
+        if tokens[front_idx][:2] == "##":
+            front_idx -= 1
+        elif (len(tokens[front_idx])<=2 or tokens[front_idx][:2]!="##"):
+            break
+        else: 
+            front_idx -= 1
+
+    while True:
+        if (len(tokens[back_idx+1])<=2) or (tokens[back_idx+1][:2]!="##"):
+            break
+        else:
+            back_idx+=1
+          
+    word = re.sub('##','',''.join(tokens[front_idx:back_idx+1]))
     
-    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked_ST")
+    if answer in word:
+        word=None
     
-    return new_dataset
+    return word
+
+def make_mask_word(tokenizer, ids, answer, idx):
+    """find confusing words for masking"""
+    front_idx = int(idx)
+    back_idx = int(idx)
+    
+    tokens = tokenizer.convert_ids_to_tokens(ids)
+    
+    while True:
+        if tokens[front_idx][:2] == "##":
+            front_idx -= 1
+        elif (len(tokens[front_idx])<=2 or tokens[front_idx][:2]!="##"):
+            break
+        else: 
+            front_idx -= 1
+
+    while True:
+        if (len(tokens[back_idx+1])<=2) or (tokens[back_idx+1][:2]!="##"):
+            break
+        else:
+            back_idx+=1
+    
+    word =  re.sub('##','',''.join(tokens[front_idx:back_idx+1]))
+    
+    if answer not in word:
+        for idx in range(front_idx,back_idx+1):
+            tokens[idx] = tokenizer.mask_token
+    
+    result = torch.tensor(tokenizer.convert_tokens_to_ids(tokens))
+
+    return result
 
 def make_word_dict(tokens, tokenizer, answer):
     """Check the token to make a perfect word."""
@@ -102,7 +150,131 @@ def make_word_dict(tokens, tokenizer, answer):
     return word_index
 
 
-def mask_span_unit(train_dataset, tokenizer):
+def get_question_random_masking_dataset(train_data_path):
+    """mask proper nouns and common nouns randomly included in the question."""
+    context_list = []
+    question_list = []
+    id_list=[]
+    answer_list=[]
+    
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
+    train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
+    val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
+    
+    mecab = Mecab()
+    for i in tqdm(range(train_dataset.num_rows)):
+        text = train_dataset["question"][i]
+        
+        # 단어 기준 Masking
+        for word, pos in mecab.pos(text):
+            # 하나의 단어만 30% 확률로 Masking
+            if pos in {"NNG", "NNP"} and (random.random() > 0.7):
+                context_list.append(train_dataset["context"][i])
+                question_list.append(re.sub(word, tokenizer.mask_token, text)) # tokenizer.mask_token
+                id_list.append(train_dataset[i]["id"])
+                answer_list.append(train_dataset[i]["answers"])
+    
+    # list를 Dataset 형태로 변환
+    new_set = Dataset.from_dict({"id" : id_list,
+                                        "context": context_list, 
+                                        "question": question_list,
+                                        "answers": answer_list})
+    
+    new_dataset = DatasetDict({
+        'train': new_set,
+        'validation': val_dataset
+    })
+
+    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_random_masked")
+    
+    return new_dataset
+
+def get_ST_mask_dataset(train_data_path):
+    """Masking on the context by using sentence transformer."""
+    
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
+    raw_train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
+    raw_val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
+    column_names=raw_train_dataset.column_names
+    
+    
+    _ext_prepare_train_features = partial(get_extractive_features, tokenizer=tokenizer, mode="train")
+    
+    tokenized_train_dataset = raw_train_dataset.map(
+        _ext_prepare_train_features,
+        batched=True,
+        #num_proc=4,
+        remove_columns=column_names,
+    )
+    
+    _ext_prepare_validation_features = partial(get_extractive_features, tokenizer=tokenizer, mode="eval")
+    
+    tokenized_valid_dataset = raw_val_dataset.map(
+        _ext_prepare_validation_features,
+        batched=True,
+        #num_proc=4,
+        remove_columns=column_names,
+    )
+    
+    masked_dataset = mask_word_with_ST(tokenized_train_dataset, tokenizer)
+    
+    new_dataset = DatasetDict({
+        'train': masked_dataset,
+        'validation': tokenized_valid_dataset
+    })
+    
+    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked_ST")
+    
+    return new_dataset
+
+def get_emb_mask_dataset(dataset_path, mode):
+    """Masks or adds words that the model we are going to use is confusing."""
+    
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
+    raw_train_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['train']
+    raw_val_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['validation']
+    
+    tokenized_c = tokenizer(raw_train_dataset['context'], return_tensors='pt', truncation=True, max_length=384, stride=128,return_overflowing_tokens=True,return_offsets_mapping=True,padding="max_length")
+    
+    offset_mapping = tokenized_c.pop("offset_mapping")
+    sample_mapping = tokenized_c.pop("overflow_to_sample_mapping")
+    
+    _get_masking_features = partial(get_masking_features, tokenizer = tokenizer)
+    new_q = raw_train_dataset.map(
+        _get_masking_features,
+        batched=True,
+        remove_columns=raw_train_dataset.column_names
+    )
+    
+    Tensor_dataset = TensorDataset(
+        tokenized_c['input_ids'], tokenized_c['attention_mask'], tokenized_c['token_type_ids'],
+        torch.tensor(new_q['ids']), torch.tensor(new_q['attention']), torch.tensor(new_q['token_type']),
+        torch.tensor(new_q['answer'])
+    )
+
+    train_dataloader = DataLoader(
+        Tensor_dataset,
+        batch_size=2
+    )
+    
+    if mode == "mask":
+        masked_dataset = mask_word_with_emb(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
+    elif mode == "hard":
+        masked_dataset = add_word_with_emb(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
+    
+    new_dataset = DatasetDict({
+        'train':masked_dataset,
+        'validation':raw_val_dataset
+    })
+    
+    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked")
+    
+    return new_dataset
+
+def mask_word_with_ST(train_dataset, tokenizer):
     """Calculate cosine similarity between query and 
        all words by using sentence transformer, 
        and mask top N words with high similarity."""
@@ -159,180 +331,7 @@ def mask_span_unit(train_dataset, tokenizer):
     })
 
 
-def make_question_random_masking(train_data_path):
-    """mask proper nouns and common nouns randomly included in the question."""
-    context_list = []
-    question_list = []
-    id_list=[]
-    answer_list=[]
-    
-    tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
-    
-    train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
-    val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
-    
-    mecab = Mecab()
-    for i in tqdm(range(train_dataset.num_rows)):
-        text = train_dataset["question"][i]
-        
-        # 단어 기준 Masking
-        for word, pos in mecab.pos(text):
-            # 하나의 단어만 30% 확률로 Masking
-            if pos in {"NNG", "NNP"} and (random.random() > 0.7):
-                context_list.append(train_dataset["context"][i])
-                question_list.append(re.sub(word, tokenizer.mask_token, text)) # tokenizer.mask_token
-                id_list.append(train_dataset[i]["id"])
-                answer_list.append(train_dataset[i]["answers"])
-    
-    # list를 Dataset 형태로 변환
-    new_set = Dataset.from_dict({"id" : id_list,
-                                        "context": context_list, 
-                                        "question": question_list,
-                                        "answers": answer_list})
-    
-    new_dataset = DatasetDict({
-        'train': new_set,
-        'validation': val_dataset
-    })
-    
-    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_random_masked")
-    
-    return new_dataset
-
-
-def make_trunc_dataset(examples, tokenizer):
-    """Create dataset for random masking."""
-    new_tokenized_ids=[]
-    new_att =[]
-    new_token_type=[]
-    new_answer = []
-    
-    texts = [text['text'][0] for text in examples['answers']]
-    
-    tokenized_q = tokenizer(examples['question'], return_tensors='pt', truncation=True, max_length=384, padding="max_length")
-    tokenized_c = tokenizer(examples['context'], return_tensors='pt', truncation=True, max_length=384, stride=128,return_overflowing_tokens=True,return_offsets_mapping=True,padding="max_length")
-    tokenized_a = tokenizer(texts, return_tensors='pt', max_length=100, padding="max_length")
-    
-    sample_mapping = tokenized_c.pop("overflow_to_sample_mapping")
-    
-    for i in tqdm(sample_mapping):
-        new_tokenized_ids.append(tokenized_q['input_ids'][i].tolist())
-        new_att.append(tokenized_q['attention_mask'][i].tolist())
-        new_token_type.append(tokenized_q['token_type_ids'][i].tolist())
-        new_answer.append(tokenized_a['input_ids'][i].tolist())
-    
-    return { 'ids':new_tokenized_ids, 
-            'attention':new_att, 
-            'token_type':new_token_type, 
-            'answer':new_answer }
-
-
-def make_emb_dataset(dataset_path, mode):
-    """Masks or adds words that the model we are going to use is confusing."""
-    
-    tokenizer = AutoTokenizer.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True)
-    
-    raw_train_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['train']
-    raw_val_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['validation']
-    
-    tokenized_c = tokenizer(raw_train_dataset['context'], return_tensors='pt', truncation=True, max_length=384, stride=128,return_overflowing_tokens=True,return_offsets_mapping=True,padding="max_length")
-    
-    offset_mapping = tokenized_c.pop("offset_mapping")
-    sample_mapping = tokenized_c.pop("overflow_to_sample_mapping")
-    
-    _make_trunc_dataset = partial(make_trunc_dataset, tokenizer = tokenizer)
-    new_q = raw_train_dataset.map(
-        _make_trunc_dataset,
-        batched=True,
-        remove_columns=raw_train_dataset.column_names
-    )
-    
-    Tensor_dataset = TensorDataset(
-        tokenized_c['input_ids'], tokenized_c['attention_mask'], tokenized_c['token_type_ids'],
-        torch.tensor(new_q['ids']), torch.tensor(new_q['attention']), torch.tensor(new_q['token_type']),
-        torch.tensor(new_q['answer'])
-    )
-
-    train_dataloader = DataLoader(
-        Tensor_dataset,
-        batch_size=2
-    )
-    
-    if mode == "mask":
-        masked_dataset = mask_to_word(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
-    elif mode == "hard":
-        masked_dataset = make_harder_word(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
-    
-    new_dataset = DatasetDict({
-        'train':masked_dataset,
-        'validation':raw_val_dataset
-    })
-    
-    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked")
-    
-    return new_dataset
-
-def find_hard_word(tokenizer, ids, answer, idx):
-    """find confusing words for adding"""
-    
-    front_idx = int(idx)
-    back_idx = int(idx)
-    
-    tokens = tokenizer.convert_ids_to_tokens(ids)
-    
-    while True:
-        if tokens[front_idx][:2] == "##":
-            front_idx -= 1
-        elif (len(tokens[front_idx])<=2 or tokens[front_idx][:2]!="##"):
-            break
-        else: 
-            front_idx -= 1
-
-    while True:
-        if (len(tokens[back_idx+1])<=2) or (tokens[back_idx+1][:2]!="##"):
-            break
-        else:
-            back_idx+=1
-          
-    word = re.sub('##','',''.join(tokens[front_idx:back_idx+1]))
-    
-    if answer in word:
-        word=None
-    
-    return word
-
-def find_word(tokenizer, ids, answer, idx):
-    """find confusing words for masking"""
-    front_idx = int(idx)
-    back_idx = int(idx)
-    
-    tokens = tokenizer.convert_ids_to_tokens(ids)
-    
-    while True:
-        if tokens[front_idx][:2] == "##":
-            front_idx -= 1
-        elif (len(tokens[front_idx])<=2 or tokens[front_idx][:2]!="##"):
-            break
-        else: 
-            front_idx -= 1
-
-    while True:
-        if (len(tokens[back_idx+1])<=2) or (tokens[back_idx+1][:2]!="##"):
-            break
-        else:
-            back_idx+=1
-    
-    word =  re.sub('##','',''.join(tokens[front_idx:back_idx+1]))
-    
-    if answer not in word:
-        for idx in range(front_idx,back_idx+1):
-            tokens[idx] = tokenizer.mask_token
-    
-    result = torch.tensor(tokenizer.convert_tokens_to_ids(tokens))
-
-    return result
-
-def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_dataset):
+def mask_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, train_dataset):
     """find words that the model is confusing by using dot product and mask top N words."""
     new_ids=[]
     mask_token = tokenizer.mask_token_id
@@ -343,8 +342,8 @@ def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_da
                      tokenizer.sep_token_id]
     
     
-    p_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
-    q_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
+    p_encoder = AutoModel.from_pretrained('klue/roberta-large').to(device)
+    q_encoder = AutoModel.from_pretrained('klue/roberta-large').to(device)
     
     torch.cuda.empty_cache()
 
@@ -390,7 +389,7 @@ def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_da
             for idx, score in enumerate(sim_scores):
                 sorted_score, sorted_idx = torch.sort(score, descending=True)
                 for i in range(2):
-                    p_inputs['input_ids'][idx] = find_word(tokenizer, p_inputs['input_ids'][idx], answers[idx], sorted_idx[i])
+                    p_inputs['input_ids'][idx] = make_mask_word(tokenizer, p_inputs['input_ids'][idx], answers[idx], sorted_idx[i])
                 new_ids.append(p_inputs['input_ids'][idx].tolist())
     
     origin_answers = train_dataset['answers']
@@ -427,7 +426,7 @@ def mask_to_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_da
         '__index_level_0__' : train_dataset['__index_level_0__'],
     })
 
-def make_harder_word(dataloader, tokenizer, offset_mapping, sample_mapping, train_dataset):
+def add_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, train_dataset):
     """find words that the model is confusing by using dot product and add top N words."""
     mask_token = tokenizer.mask_token_id
     
@@ -437,8 +436,8 @@ def make_harder_word(dataloader, tokenizer, offset_mapping, sample_mapping, trai
                      tokenizer.sep_token_id]
     
     
-    p_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
-    q_encoder = AutoModel.from_pretrained('kiyoung2/roberta-large-qaconv-sds', use_auth_token=True).to(device)
+    p_encoder = AutoModel.from_pretrained('klue/roberta-large').to(device)
+    q_encoder = AutoModel.from_pretrained('klue/roberta-large').to(device)
     
     torch.cuda.empty_cache()
 
@@ -493,7 +492,7 @@ def make_harder_word(dataloader, tokenizer, offset_mapping, sample_mapping, trai
                 sim_words=[]
                 
                 for i in range(6):
-                    find_w = find_hard_word(tokenizer, p_inputs['input_ids'][idx], answers[idx], sorted_idx[i])
+                    find_w = make_hard_word(tokenizer, p_inputs['input_ids'][idx], answers[idx], sorted_idx[i])
                     if find_w is not None:
                         sim_words.append(find_w)
                         sim_words = list(set(sim_words))
