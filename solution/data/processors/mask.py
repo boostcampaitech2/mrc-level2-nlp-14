@@ -22,7 +22,7 @@ def cosine_similarity(A, B):
     """Calculate cosine similarity between A and B"""
     return dot(A, B) / (norm(A) * norm(B))
 
-def get_masking_features(examples, tokenizer):
+def _ext_prepare_train_features_flatten_trunc(examples, tokenizer):
     """Create dataset for random masking."""
     new_tokenized_ids=[]
     new_att =[]
@@ -148,131 +148,6 @@ def make_word_dict(tokens, tokenizer, answer):
                 index = []
 
     return word_index
-
-
-def get_question_random_masking_dataset(train_data_path):
-    """mask proper nouns and common nouns randomly included in the question."""
-    context_list = []
-    question_list = []
-    id_list=[]
-    answer_list=[]
-    
-    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
-    
-    train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
-    val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
-    
-    mecab = Mecab()
-    for i in tqdm(range(train_dataset.num_rows)):
-        text = train_dataset["question"][i]
-        
-        # 단어 기준 Masking
-        for word, pos in mecab.pos(text):
-            # 하나의 단어만 30% 확률로 Masking
-            if pos in {"NNG", "NNP"} and (random.random() > 0.7):
-                context_list.append(train_dataset["context"][i])
-                question_list.append(re.sub(word, tokenizer.mask_token, text)) # tokenizer.mask_token
-                id_list.append(train_dataset[i]["id"])
-                answer_list.append(train_dataset[i]["answers"])
-    
-    # list를 Dataset 형태로 변환
-    new_set = Dataset.from_dict({"id" : id_list,
-                                        "context": context_list, 
-                                        "question": question_list,
-                                        "answers": answer_list})
-    
-    new_dataset = DatasetDict({
-        'train': new_set,
-        'validation': val_dataset
-    })
-
-    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_random_masked")
-    
-    return new_dataset
-
-def get_ST_mask_dataset(train_data_path):
-    """Masking on the context by using sentence transformer."""
-    
-    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
-    
-    raw_train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
-    raw_val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
-    column_names=raw_train_dataset.column_names
-    
-    
-    _ext_prepare_train_features = partial(get_extractive_features, tokenizer=tokenizer, mode="train")
-    
-    tokenized_train_dataset = raw_train_dataset.map(
-        _ext_prepare_train_features,
-        batched=True,
-        #num_proc=4,
-        remove_columns=column_names,
-    )
-    
-    _ext_prepare_validation_features = partial(get_extractive_features, tokenizer=tokenizer, mode="eval")
-    
-    tokenized_valid_dataset = raw_val_dataset.map(
-        _ext_prepare_validation_features,
-        batched=True,
-        #num_proc=4,
-        remove_columns=column_names,
-    )
-    
-    masked_dataset = mask_word_with_ST(tokenized_train_dataset, tokenizer)
-    
-    new_dataset = DatasetDict({
-        'train': masked_dataset,
-        'validation': tokenized_valid_dataset
-    })
-    
-    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked_ST")
-    
-    return new_dataset
-
-def get_emb_mask_dataset(dataset_path, mode):
-    """Masks or adds words that the model we are going to use is confusing."""
-    
-    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
-    
-    raw_train_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['train']
-    raw_val_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['validation']
-    
-    tokenized_c = tokenizer(raw_train_dataset['context'], return_tensors='pt', truncation=True, max_length=384, stride=128,return_overflowing_tokens=True,return_offsets_mapping=True,padding="max_length")
-    
-    offset_mapping = tokenized_c.pop("offset_mapping")
-    sample_mapping = tokenized_c.pop("overflow_to_sample_mapping")
-    
-    _get_masking_features = partial(get_masking_features, tokenizer = tokenizer)
-    new_q = raw_train_dataset.map(
-        _get_masking_features,
-        batched=True,
-        remove_columns=raw_train_dataset.column_names
-    )
-    
-    Tensor_dataset = TensorDataset(
-        tokenized_c['input_ids'], tokenized_c['attention_mask'], tokenized_c['token_type_ids'],
-        torch.tensor(new_q['ids']), torch.tensor(new_q['attention']), torch.tensor(new_q['token_type']),
-        torch.tensor(new_q['answer'])
-    )
-
-    train_dataloader = DataLoader(
-        Tensor_dataset,
-        batch_size=2
-    )
-    
-    if mode == "mask":
-        masked_dataset = mask_word_with_emb(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
-    elif mode == "hard":
-        masked_dataset = add_word_with_emb(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
-    
-    new_dataset = DatasetDict({
-        'train':masked_dataset,
-        'validation':raw_val_dataset
-    })
-    
-    new_dataset.save_to_disk("./data/aistage-mrc/train_dataset_masked")
-    
-    return new_dataset
 
 def mask_word_with_ST(train_dataset, tokenizer):
     """Calculate cosine similarity between query and 
@@ -516,3 +391,127 @@ def add_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, tra
         'document_id': train_dataset['document_id'],
         '__index_level_0__' : train_dataset['__index_level_0__'],
     })
+
+def get_question_random_masking_dataset(train_data_path, save_path):
+    """mask proper nouns and common nouns randomly included in the question."""
+    context_list = []
+    question_list = []
+    id_list=[]
+    answer_list=[]
+    
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
+    train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
+    val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
+    
+    mecab = Mecab()
+    for i in tqdm(range(train_dataset.num_rows)):
+        text = train_dataset["question"][i]
+        
+        # 단어 기준 Masking
+        for word, pos in mecab.pos(text):
+            # 하나의 단어만 30% 확률로 Masking
+            if pos in {"NNG", "NNP"} and (random.random() > 0.7):
+                context_list.append(train_dataset["context"][i])
+                question_list.append(re.sub(word, tokenizer.mask_token, text)) # tokenizer.mask_token
+                id_list.append(train_dataset[i]["id"])
+                answer_list.append(train_dataset[i]["answers"])
+    
+    # list를 Dataset 형태로 변환
+    new_set = Dataset.from_dict({"id" : id_list,
+                                        "context": context_list, 
+                                        "question": question_list,
+                                        "answers": answer_list})
+    
+    new_dataset = DatasetDict({
+        'train': new_set,
+        'validation': val_dataset
+    })
+
+    new_dataset.save_to_disk(save_path+'/question_mask_dataset')
+    
+    return new_dataset
+
+def get_ST_mask_dataset(train_data_path, save_path):
+    """Masking on the context by using sentence transformer."""
+    
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
+    raw_train_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['train']
+    raw_val_dataset = load_from_disk(os.path.join(train_data_path, "train_dataset"))['validation']
+    column_names=raw_train_dataset.column_names
+    
+    
+    _ext_prepare_train_features = partial(get_extractive_features, tokenizer=tokenizer, mode="train")
+    
+    tokenized_train_dataset = raw_train_dataset.map(
+        _ext_prepare_train_features,
+        batched=True,
+        #num_proc=4,
+        remove_columns=column_names,
+    )
+    
+    _ext_prepare_validation_features = partial(get_extractive_features, tokenizer=tokenizer, mode="eval")
+    
+    tokenized_valid_dataset = raw_val_dataset.map(
+        _ext_prepare_validation_features,
+        batched=True,
+        #num_proc=4,
+        remove_columns=column_names,
+    )
+    
+    masked_dataset = mask_word_with_ST(tokenized_train_dataset, tokenizer)
+    
+    new_dataset = DatasetDict({
+        'train': masked_dataset,
+        'validation': tokenized_valid_dataset
+    })
+    
+    new_dataset.save_to_disk(save_path+'/st_mask_dataset')
+    
+    return new_dataset
+
+def get_emb_mask_dataset(dataset_path, mode, save_path):
+    """Masks or adds words that the model we are going to use is confusing."""
+    
+    tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
+    
+    raw_train_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['train']
+    raw_val_dataset = load_from_disk(os.path.join(dataset_path, "train_dataset"))['validation']
+    
+    tokenized_c = tokenizer(raw_train_dataset['context'], return_tensors='pt', truncation=True, max_length=384, stride=128,return_overflowing_tokens=True,return_offsets_mapping=True,padding="max_length")
+    
+    offset_mapping = tokenized_c.pop("offset_mapping")
+    sample_mapping = tokenized_c.pop("overflow_to_sample_mapping")
+    
+    ext_prepare_train_features_flatten_trunc = partial(_ext_prepare_train_features_flatten_trunc, tokenizer = tokenizer)
+    new_q = raw_train_dataset.map(
+        ext_prepare_train_features_flatten_trunc,
+        batched=True,
+        remove_columns=raw_train_dataset.column_names
+    )
+    
+    Tensor_dataset = TensorDataset(
+        tokenized_c['input_ids'], tokenized_c['attention_mask'], tokenized_c['token_type_ids'],
+        torch.tensor(new_q['ids']), torch.tensor(new_q['attention']), torch.tensor(new_q['token_type']),
+        torch.tensor(new_q['answer'])
+    )
+
+    train_dataloader = DataLoader(
+        Tensor_dataset,
+        batch_size=2
+    )
+    
+    if mode == "mask":
+        masked_dataset = mask_word_with_emb(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
+    elif mode == "hard":
+        masked_dataset = add_word_with_emb(train_dataloader, tokenizer, offset_mapping, sample_mapping, raw_train_dataset)
+    
+    new_dataset = DatasetDict({
+        'train':masked_dataset,
+        'validation':raw_val_dataset
+    })
+    
+    new_dataset.save_to_disk(save_path+'/mask_dataset')
+    
+    return new_dataset

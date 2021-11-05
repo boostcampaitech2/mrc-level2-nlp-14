@@ -52,7 +52,7 @@ def main():
     set_seed(training_args.seed)
 
     if data_args.make_mask:
-        make_emb_dataset(data_args.dataset_path,data_args.masking_type)
+        make_emb_dataset(data_args.dataset_path,data_args.masking_type, data_args.dataset_path)
         return
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_path}")
@@ -108,7 +108,7 @@ def main():
     logger.warning(f"CHECKPOINT: {checkpoint}")
 
 
-    #curriculum learning setting
+    # curriculum learning setting
     if data_args.curriculum_learn:
         logger.warning(f"load from checkpoint {checkpoint}")
         ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
