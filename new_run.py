@@ -52,7 +52,7 @@ def main():
 
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_path}")
-    
+
     # wandb setting
     os.environ["WANDB_PROJECT"] = project_args.wandb_project
 
@@ -128,12 +128,12 @@ def main():
             eval_features, eval_datasets = convert_examples_to_features(
                 processor, tokenizer, retriever, topk=data_args.top_k_retrieval, mode="eval")
     
-        logger.warning(f"load from checkpoint {checkpoint}")
-        ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
-        state_dict = torch.load(ckpt_model_file, map_location="cpu")
-        reader._trainer._load_state_dict_in_model(state_dict)
-        del state_dict
-        torch.cuda.empty_cache()
+        # logger.warning(f"load from checkpoint {checkpoint}")
+        # ckpt_model_file = os.path.join(checkpoint, "pytorch_model.bin")
+        # state_dict = torch.load(ckpt_model_file, map_location="cpu")
+        # reader._trainer._load_state_dict_in_model(state_dict)
+        # del state_dict
+        # torch.cuda.empty_cache()
         
         with reader.mode_change(mode="evaluate"):
             eval_metrics = reader.read(eval_dataset=eval_features,
