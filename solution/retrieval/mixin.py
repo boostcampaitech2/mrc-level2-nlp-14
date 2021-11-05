@@ -165,7 +165,7 @@ class OutputMixin:
                 q_outputs = sentence_encoder(**q_inputs)
 
             dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
-            rank = torch.self.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
+            rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
             topk_sentences = rank[:self.args.top_k_punctuation].tolist()
 
             new_contexts = []
