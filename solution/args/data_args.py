@@ -42,6 +42,7 @@ class DataPathArguments(DataArguments):
         metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
     )
     
+    
 @dataclass
 class TokenizerArguments(DataPathArguments):
     max_seq_length: int = field(
@@ -70,6 +71,7 @@ class TokenizerArguments(DataPathArguments):
         metadata={"help": ""}
     )
 
+        
 @dataclass
 class RetrievalArguments(TokenizerArguments):
     retrieval_mode: str = field(
@@ -115,6 +117,7 @@ class RetrievalArguments(TokenizerArguments):
         metadata={"help": "Define how many clusters to use for faiss."}
     )
 
+        
 @dataclass
 class ElasticSearchArguments(RetrievalArguments):
     index_name: str = field(
