@@ -9,7 +9,7 @@ DataArguments:
   masking_type: "mask"
   curriculum_split_name: train
   curriculum_learn: False
-  dataset_version: v1.3.1
+  dataset_version: v1.0.0
   
   # TokenizerArguments
   max_seq_length: 384
@@ -54,53 +54,46 @@ DataArguments:
   lmjm_lambda: 0.1
   
   # DenoisingArguments
-  # denoising_func: sentence_permutation
-  permute_sentence_ratio: 0.5
+  denoising_func: None
+  permute_sentence_ratio: 0.0
 
 ModelArguments:
 
   # ModelArguments
-  model_name_or_path: ./outputs/layer_2_1900
+  model_name_or_path: klue/roberta-large
   reader_type: extractive
   architectures: RobertaForQAWithConvSDSHead
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
   model_init: qaconv_head
-  # use_auth_token: True
-  # revision: None
+  use_auth_token: True
+  revision: main
   
   # ModelHeadArguments
   model_head: sds_conv
   qa_conv_out_channel: 1024
   qa_conv_input_size: 384
   qa_conv_n_layers: 5
-  use_auth_token: True
+  use_auth_token: Fasle
   
 TrainingArguments:
 
   # HfTrainingArguments
   report_to: wandb
   run_name: run_test
-  output_dir: outputs/run_test_2
+  output_dir: outputs/run_test
   overwrite_output_dir: False
   learning_rate: 2e-6
-  do_train: False
-  do_eval: False
+  do_train: True
+  do_eval: True
   do_predict: True # eval_retrieval = True 필수
-
   evaluation_strategy: steps
   save_strategy: steps
   per_device_train_batch_size: 16
   per_device_eval_batch_size: 16
-  num_train_epochs: 2
-
-  do_pos_ensemble: False
-  evaluation_strategy: epoch
-  save_strategy: epoch
-  per_device_train_batch_size: 16
-  per_device_eval_batch_size: 32
   num_train_epochs: 1
+  do_pos_ensemble: False
   eval_steps: 100
   save_steps: 100
   save_total_limit: 3
@@ -110,7 +103,7 @@ TrainingArguments:
   load_best_model_at_end: True
   metric_for_best_model: exact_match
   logging_dir: logs
-  lr_scheduler_type: cosine_with_restarts
+  lr_scheduler_type: cosine
 
   # Seq2SeqTrainingArguments
   sortish_sampler: False
@@ -122,5 +115,5 @@ TrainingArguments:
 ProjectArguments:
   
   # AnalyzerArguments
-  wandb_project: tu_curri_test
+  wandb_project: mrc
   checkpoint: null
