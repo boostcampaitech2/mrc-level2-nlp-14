@@ -1,10 +1,10 @@
-import numpy as np
+import os
 import torch
+from transformers import BertModel, BertPreTrainedModel
 
 from solution.args import DataArguments
-from solution.retrieval.dense.base import DenseRetrieval
-from transformers import BertModel, BertPreTrainedModel, BertConfig, AutoTokenizer
-
+from .base import DenseRetrieval
+from solution.utils.constant import Q_ENCODER_NAME, P_ENCODER_NAME
 
 class BertEncoder(BertPreTrainedModel):
     def __init__(self, config):
@@ -28,8 +28,8 @@ class BertEncoder(BertPreTrainedModel):
 class DensePassageRetrieval(DenseRetrieval):
     def __init__(self, args: DataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
-        self.q_encoder = torch.load("dense_retrieval/q_encoder.pt")
-        self.p_encoder = torch.load("dense_retrieval/p_encoder.pt")
+        self.q_encoder = torch.load(os.path.join(args.retrieval_model_path, f"{Q_ENCODER_NAME}.pt"))
+        self.p_encoder = torch.load(os.path.join(args.retrieval_model_path, f"{P_ENCODER_NAME}.pt"))
 
         self.q_encoder.eval()
         self.p_encoder.eval()

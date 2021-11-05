@@ -1,4 +1,4 @@
-import numpy as np
+import os
 import string
 import torch
 import torch.nn as nn
@@ -7,6 +7,7 @@ from transformers import BertPreTrainedModel, BertModel, BertTokenizerFast
 
 from solution.args import DataArguments
 from .base import DenseRetrieval
+from solution.utils.constant import COLBERT_NAME
 
 
 class ColBERTEncoder(BertPreTrainedModel):
@@ -73,7 +74,7 @@ class ColBERTEncoder(BertPreTrainedModel):
 class ColBERTRetrieval(DenseRetrieval):
     def __init__(self, args: DataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
-        self.colbert = torch.load("dense_retrieval/colbert.pt")
+        self.colbert = torch.load(os.path.join(args.retrieval_model_path, f"{COLBERT_NAME}.pt"))
         self.colbert.eval()
         self.q_encoder = self.colbert.query
         self.p_encoder = self.colbert.doc

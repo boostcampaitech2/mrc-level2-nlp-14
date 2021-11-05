@@ -89,6 +89,10 @@ class RetrievalArguments(TokenizerArguments):
         default="mecab",
         metadata={"help": ""}
     )
+    retrieval_model_path: str = field(
+        default="./dense_retrieval",
+        metadata={"help": ""}
+    )
     sp_max_features: int = field(
         default=50000,
         metadata={"help": "Max features used for TF-IDF Vectorizer."}
