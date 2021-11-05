@@ -2,33 +2,33 @@ from transformers import (
     RobertaForQuestionAnswering,
     RobertaPreTrainedModel,
     RobertaModel,
+    RobertaEmbeddings,
+    RobertaPooler,
+    RobertaEncoder,
+    RobertaModel,
 )
-
-from transformers.models.roberta.modeling_roberta import (
-    RobertaEmbeddings, 
-    RobertaPreTrainedModel, 
-    RobertaPooler, 
-    RobertaEncoder, 
-    RobertaModel, 
-    PreTrainedModel, 
-    RobertaConfig
-)
-
 from transformers.modeling_outputs import (
     QuestionAnsweringModelOutput, 
     BaseModelOutputWithPoolingAndCrossAttentions
 )
-
-import numpy as np
-
-import torch
-import torch.nn as nn
-
 from ..modeling_heads import (
     QAConvSDSHead,
     QAConvHeadWithAttention,
     QAConvHead,
 )
+import torch
+import torch.nn as nn
+from transformers.models.roberta.modeling_roberta import (
+    RobertaEmbeddings, 
+    RobertaPreTrainedModel, 
+    RobertaPooler, 
+    RobertaEncoder, 
+    RobertaModel,
+)
+
+import numpy as np
+import torch
+from torch.nn import CrossEntropyLoss
 
 
 class RobertaForQA(RobertaForQuestionAnswering):
@@ -138,7 +138,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
@@ -154,6 +154,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+
 
 class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
     """
@@ -181,7 +182,6 @@ class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
             input_shape = inputs_embeds.size()[:-1]
 
         seq_length = input_shape[1]
-
 
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
@@ -219,21 +219,10 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
 
         self.embeddings = RobertaEmbeddingsWithUnderline(config)
         self.encoder = RobertaEncoder(config)
-
         self.pooler = RobertaPooler(config) if add_pooling_layer else None
 
         self.init_weights()
 
-    def get_input_embeddings(self):
-        return self.embeddings.word_embeddings
-
-    def set_input_embeddings(self, value):
-        self.embeddings.word_embeddings = value
-
-    def _prune_heads(self, heads_to_prune):
-        for layer, heads in heads_to_prune.items():
-            self.encoder.layer[layer].attention.prune_heads(heads)
-    
     def forward(
         self,
         input_ids=None,
@@ -352,7 +341,6 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
         self.num_labels = config.num_labels
 
         self.roberta = RobertaModelWithUnderline(config, add_pooling_layer=False)
-        # self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
         self.qa_outputs = QAConvSDSHead(
             config.qa_conv_input_size,
             config.hidden_size,
@@ -369,8 +357,6 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
         position_ids=None,
         underline_ids = None,
         head_mask=None,
-
-
         inputs_embeds=None,
         start_positions=None,
         end_positions=None,
@@ -413,7 +399,7 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
             start_positions = start_positions.clamp(0, ignored_index)
             end_positions = end_positions.clamp(0, ignored_index)
 
-            loss_fct = nn.CrossEntropyLoss(ignore_index=ignored_index)
+            loss_fct = CrossEntropyLoss(ignore_index=ignored_index)
             start_loss = loss_fct(start_logits, start_positions)
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
