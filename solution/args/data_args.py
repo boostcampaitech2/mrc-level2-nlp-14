@@ -49,7 +49,7 @@ class DataPathArguments(DataArguments):
         default="./data/aistage-mrc/train_dataset", 
         metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
     )
-   
+    
     
 @dataclass
 class TokenizerArguments(DataPathArguments):
@@ -86,10 +86,46 @@ class TokenizerArguments(DataPathArguments):
         default=False,
         metadata={"help": ""}
     )
-   
-    
+
+
 @dataclass
-class RetrievalArguments(TokenizerArguments):
+class HighlightingArguments(TokenizerArguments):
+    do_underline: bool = field(
+        default=False,
+        metadata={"help": "Whether to add underline embedding at the time of tokenizing or not"},
+    )
+    do_punctuation: bool = field(
+        default=False,
+        metadata={"help": "Whether to add punctuation to the context or not"},
+    )
+    punct_model_name_or_path: str = field(
+        default="./outputs/run_test",
+        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+    )
+    punct_max_seq_length: int = field(
+        default=100,
+        metadata={
+            "help": "The maximum total input sequence length after tokenization. Sequences longer "
+            "than this will be truncated, sequences shorter will be padded."
+        },
+    )
+    punct_use_auth_token: bool = field(
+        default=False,
+        metadata={"help": ""}
+    )
+    punct_revision: str = field(
+        default="main",
+        metadata={"help": ""}
+    )
+    top_k_punctuation: int = field(
+        default=10,
+        metadata={
+            "help": "Define how many top-k sentences to retrieve based on similarity."
+        },
+    )
+        
+@dataclass
+class RetrievalArguments(HighlightingArguments):
     retrieval_mode: str = field(
         default="sparse",
         metadata={"help": ""}
@@ -137,6 +173,7 @@ class RetrievalArguments(TokenizerArguments):
         metadata={"help": "Define how many clusters to use for faiss."}
     )
 
+        
 @dataclass
 class ElasticSearchArguments(RetrievalArguments):
     index_name: str = field(

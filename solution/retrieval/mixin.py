@@ -3,9 +3,9 @@ import faiss
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
-
+import torch
 from datasets import Dataset, DatasetDict
-
+from transformers import AutoModel, AutoTokenizer
 from solution.utils.constant import (
     MRC_EVAL_FEATURES,
     MRC_PREDICT_FEATURES
@@ -61,9 +61,28 @@ class OutputMixin:
         """
         Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
         """
+        # Need to modifiy the arguement
+        if self.args.do_punctuation == False:
+            device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+            tokenizer = AutoTokenizer.from_pretrained(
+                self.args.punct_model_name_or_path,
+                use_auth_token=self.args.punct_use_auth_token, 
+                revision=self.args.punct_revision
+                )
+        
+            sentence_encoder = AutoModel.from_pretrained(
+                self.args.punct_model_name_or_path, 
+                use_auth_token=self.args.punct_use_auth_token, 
+                revision=self.args.punct_revision
+                ).to(device)
+        else:
+            device = None
+            tokenizer = None
+            sentence_encoder = None
+        
         total = []
         
-        for idx, example in enumerate(query_or_dataset):
+        for idx, example in enumerate(tqdm(query_or_dataset)):
             if doc_contexts:
                 contexts = doc_contexts[idx]
             else:
@@ -75,14 +94,20 @@ class OutputMixin:
                 # Retrieve한 Passage의 id, score, context를 반환합니다.
                 "context_id": doc_indices[idx],
                 "context_score": doc_scores[idx],
-                "context": self.process_topk_context(contexts)
+                "context": self.process_topk_context(
+                                contexts,
+                                example["question"],
+                                sentence_encoder,
+                                tokenizer,
+                                device
+                            )
             }
             if "context" in example.keys() and "answers" in example.keys():
                 # validation 데이터를 사용하면 ground_truth context와 answer도 반환
                 tmp["original_context"] = example["context"]
                 tmp["answers"] = example["answers"]
             total.append(tmp)
-            
+
         return pd.DataFrame(total)
     
     def dataframe_to_datasetdict(
@@ -105,7 +130,14 @@ class OutputMixin:
         datasets = Dataset.from_pandas(df, features=features)
         return datasets
     
-    def process_topk_context(self, contexts):
+    def process_topk_context(
+        self,
+        contexts,
+        question,
+        sentence_encoder,
+        tokenizer,
+        device
+    ) -> str:
         """
         Process retrieved topk wiki context
 
@@ -115,8 +147,55 @@ class OutputMixin:
         Returns:
             str: joined wiki context
         """
-        # self.args에 들어오는 option으로 top-k 처리
-        contexts = "#".join(contexts)
-        contexts = contexts.split('#')
-        contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
-        return " ".join(contexts)
+
+        if self.args.do_punctuation == False:
+            contexts = "#".join(contexts)
+            contexts = contexts.split('#')
+            contexts = [context.split('[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
+            return " ".join(contexts)
+        else:
+            q_seqs = tokenizer(
+                question, 
+                padding="max_length", 
+                truncation=True, 
+                max_seq_length=self.args.punct_max_seq_length, 
+                return_tensors='pt'
+                )
+            p_seqs = tokenizer(
+                contexts, 
+                padding="max_length", 
+                truncation=True, 
+                max_seq_length=self.args.punct_max_seq_length, 
+                return_tensors='pt'
+                )
+
+            torch.cuda.empty_cache()
+
+            p_inputs = {'input_ids': p_seqs['input_ids'].to(device),
+            'attention_mask': p_seqs['attention_mask'].to(device),
+            'token_type_ids': p_seqs['token_type_ids'].to(device)
+            }
+        
+            q_inputs = {'input_ids': q_seqs['input_ids'].to(device),    
+            'attention_mask': q_seqs['attention_mask'].to(device),
+            'token_type_ids': q_seqs['token_type_ids'].to(device)}
+            
+            sentence_encoder.eval()
+
+            with torch.no_grad():
+                p_outputs = sentence_encoder(**p_inputs)
+                q_outputs = sentence_encoder(**q_inputs)
+
+            dot_prod_scores = torch.matmul(q_outputs, torch.transpose(p_outputs, 0, 1))
+            rank = torch.argsort(dot_prod_scores, dim=1, descending=True).squeeze()
+            topk_sentences = rank[:self.args.top_k_punctuation].tolist()
+
+            new_contexts = []
+            for i, sentence in enumerate(contexts): 
+                if i in topk_sentences:
+                    sentence = '^' + sentence + '※'
+                    new_contexts.append(sentence)
+                else:
+                    new_contexts.append(sentence)
+
+            return " ".join(new_contexts)

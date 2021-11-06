@@ -1,11 +1,11 @@
+import re
+import numpy as np
 from solution.utils.constant import (
     QUESTION_COLUMN_NAME,
     CONTEXT_COLUMN_NAME,
     ANSWER_COLUMN_NAME,
 )
-
 from .corrupt import permute_sentences
-import re
 
 DENOISE_FUNC = {
     "sentence_permutation": permute_sentences,
@@ -78,7 +78,31 @@ def get_extractive_features(tokenizer, mode, data_args):
             # sentence pair가 입력으로 들어올 때 0과 1로 구분지음
             return_token_type_ids=data_args.return_token_type_ids,
             padding="max_length" if data_args.pad_to_max_length else False,
+            # return_tensors='pt'
         )
+        return tokenized_examples
+
+    def get_underline_embedding(tokenized_examples):
+
+        underline_ids = np.zeros_like(tokenized_examples['input_ids'])
+
+        punct_start_token = '^'
+        punct_end_token = '※'
+
+        punct_start_id = tokenizer.convert_tokens_to_ids(punct_start_token)
+        punct_end_id = tokenizer.convert_tokens_to_ids(punct_end_token)
+
+        for i, row in enumerate(tokenized_examples['input_ids']):
+            if punct_start_id in row and punct_end_id in row:
+                punct_start = row.index(punct_start_id)
+                punct_end = row.index(punct_start_id)
+                underline_ids[i][punct_start+1:punct_end] = 1
+            else:
+                continue
+
+        underline_ids = underline_ids.tolist()
+        tokenized_examples.update({"underline_ids": underline_ids})
+
         return tokenized_examples
 
     def prepare_train_features(examples):
@@ -91,6 +115,9 @@ def get_extractive_features(tokenizer, mode, data_args):
                 examples = remove_special_token(examples)
 
         tokenized_examples = tokenize_fn(examples)
+
+        if data_args.underline == True:
+            tokenized_examples = get_underline_embedding(tokenized_examples)
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
         offset_mapping = tokenized_examples.pop("offset_mapping")
@@ -153,15 +180,18 @@ def get_extractive_features(tokenizer, mode, data_args):
                         offsets[token_start_index][0] <= start_char
                     ):
                         token_start_index += 1
+                    
                     tokenized_examples["start_positions"].append(token_start_index - 1)
 
                     # token_end_index를 실제 위치로 맞춰주는 과정
                     while offsets[token_end_index][1] >= end_char:
                         token_end_index -= 1
+                    
                     tokenized_examples["end_positions"].append(token_end_index + 1)
 
         return tokenized_examples
     
+
     def prepare_validation_features(examples, retriever=None):
         pad_on_right = tokenizer.padding_side == "right"
 
@@ -170,6 +200,10 @@ def get_extractive_features(tokenizer, mode, data_args):
             examples = remove_special_token(examples)
 
         tokenized_examples = tokenize_fn(examples)
+
+        if data_args.underline == True:
+            tokenized_examples = get_underline_embedding(tokenized_examples)
+
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
 

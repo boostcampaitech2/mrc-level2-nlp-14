@@ -1,6 +1,7 @@
 DataArguments:
 
   # DataPathArguments
+  dataset_name: ./data/aistage-mrc/train_dataset
   dataset_path: ./data/aistage-mrc
   context_path: wiki_800.json
   overwrite_cache: True
@@ -17,12 +18,21 @@ DataArguments:
   doc_stride: 128
   max_answer_length: 30
   return_token_type_ids: False
-  
+
+  # HightlightingArguments
+  do_underline: False
+  do_punctuation: False
+  top_k_punctuation: 10
+  punct_model_name_or_path: ./outputs/run_test
+  punct_use_auth_token: True
+  punct_revision: main
+  punct_max_seq_length : 100
+
   # RetrievalArguments
   retrieval_mode: elastic_engine
   retrieval_name: elastic_search
   rebuilt_index: True
-  retrieval_tokenizer_name: mecab
+  retrieval_tokenizer_name: mecab0
   sp_max_features: 50000
   sp_ngram_range: [1,2]
   top_k_retrieval: 10
@@ -66,6 +76,7 @@ ModelArguments:
   config_name: null
   tokenizer_name: null
   model_cache_dir: cache
+  model_cache_dir: None
   model_init: qaconv_head
   use_auth_token: True
   revision: main
@@ -87,9 +98,9 @@ TrainingArguments:
   learning_rate: 2e-6
   do_train: True
   do_eval: True
-  do_predict: True # when True, must set eval_retrieval = True
-  evaluation_strategy: steps
-  save_strategy: steps
+  do_predict: True            # when True, must set eval_retrieval = True
+  evaluation_strategy: steps  # when do_eval == False, set 'no'
+  save_strategy: steps        # when do_eval == False, set 'no'
   per_device_train_batch_size: 16
   per_device_eval_batch_size: 16
   num_train_epochs: 1
