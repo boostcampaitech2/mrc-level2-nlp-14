@@ -9,6 +9,7 @@ from .modeling_utils import (
 
 
 class QAConvSDSHead(nn.Module):
+    """QA conv SDS head"""
 
     def __init__(
         self,
@@ -45,9 +46,7 @@ class QAConvSDSHead(nn.Module):
 
 
 class QAConvHeadWithAttention(nn.Module):
-    """
-    QA conv head with attention
-    """
+    """QA conv head with attention"""
 
     def __init__(self, config):
         """
@@ -76,9 +75,7 @@ class QAConvHeadWithAttention(nn.Module):
 
 
 class QAConvHead(nn.Module):
-    """
-    Simple QA conv head
-    """
+    """Simple QA conv head"""
 
     def __init__(self, config):
         """
