@@ -7,12 +7,20 @@ from torch.nn import functional as F
 
 
 class QAConvSDSLayer(nn.Module):
+    """Conv SDS layer for qa output"""
 
     def __init__(
         self,
         input_size: int,
         hidden_dim: int,
     ):
+        """[summary]
+
+        Args:
+            input_size (int): [description]
+            hidden_dim (int): [description]
+        """
+
         super().__init__()
         self.conv1 = nn.Conv1d(
             in_channels=input_size,
@@ -36,9 +44,7 @@ class QAConvSDSLayer(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    """
-    Attention for query embedding
-    """
+    """Attention for query embedding"""
 
     def __init__(self, config):
         """
@@ -84,9 +90,7 @@ class AttentionLayer(nn.Module):
 
 
 class ConvLayer(nn.Module):
-    """
-    Conv layer for qa output
-    """
+    """Conv layer for qa output"""
 
     def __init__(self, config):
         """
