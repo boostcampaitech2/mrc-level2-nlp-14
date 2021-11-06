@@ -57,8 +57,7 @@ def timer(dataset: bool = True):
 
 
 def set_seed(seed: int = 42):
-    """
-    seed 고정하는 함수 (random, numpy, torch)
+    """Seed fixer (random, numpy, torch)
 
     Args:
         seed (:obj:`int`): The seed to set.
@@ -79,7 +78,7 @@ def check_no_error(
     tokenizer,
 ) -> Tuple[Any, int]:
 
-    # last checkpoint 찾기.
+    # Find last checkpoint
     last_checkpoint = None
     if (
         os.path.isdir(training_args.output_dir)
@@ -98,7 +97,7 @@ def check_no_error(
                 "the `--output_dir` or add `--overwrite_output_dir` to train from scratch."
             )
 
-    # Tokenizer check: 해당 script는 Fast tokenizer를 필요로합니다.
+    # Tokenizer check: this script needs Fast tokenizer
     if not isinstance(tokenizer, PreTrainedTokenizerFast):
         raise ValueError(
             "This example script only works for models that have a fast tokenizer. Checkout the big table of models "
