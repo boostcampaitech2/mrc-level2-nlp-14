@@ -5,6 +5,8 @@ DataArguments:
   context_path: wiki_800.json
   overwrite_cache: True
   preprocessing_num_workers: null
+  make_mask: False
+  masking_type: "mask"
   curriculum_split_name: train
   curriculum_learn: False
   dataset_version: v1.0.0
@@ -85,7 +87,7 @@ TrainingArguments:
   learning_rate: 2e-6
   do_train: True
   do_eval: True
-  do_predict: True # eval_retrieval = True 필수
+  do_predict: True # when True, must set eval_retrieval = True
   evaluation_strategy: steps
   save_strategy: steps
   per_device_train_batch_size: 16

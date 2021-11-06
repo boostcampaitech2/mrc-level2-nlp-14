@@ -24,6 +24,7 @@ from solution.utils import set_seed, check_no_error
 from transformers import AutoTokenizer
 from transformers.utils import logging
 
+from solution.data.processors.mask import get_emb_mask_dataset
 
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
@@ -51,6 +52,7 @@ def main():
 
     set_seed(training_args.seed)
 
+    
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_path}")
 
@@ -76,6 +78,14 @@ def main():
 
     train_features, train_datasets = convert_examples_to_features(processor, tokenizer)
 
+    # Get Masked Input features
+    if data_args.make_mask:
+        train_features = get_emb_mask_dataset(
+            data_args.dataset_path,
+            data_args.masking_type,
+            data_args.dataset_path
+        )
+    
     eval_features, eval_datasets = convert_examples_to_features(
         processor, tokenizer, mode="eval")
     
@@ -128,11 +138,11 @@ def main():
         reader._trainer._load_state_dict_in_model(state_dict)
         del state_dict
         torch.cuda.empty_cache()
-        checkpoint = None
 
     if training_args.do_train:
         with reader.mode_change(mode="train"):
-            train_results = reader.read(resume_from_checkpoint=checkpoint)
+            train_results = reader.read(
+                resume_from_checkpoint=None if data_args.curriculum_learn else checkpoint)
             reader.save_trainer()
             reader.save_metrics("train", 
                                 train_results.metrics, 

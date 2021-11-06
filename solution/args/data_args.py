@@ -33,6 +33,14 @@ class DataPathArguments(DataArguments):
         default="v1.0.0",
         metadata={"help": "Dataset version"},
     )
+    make_mask: bool = field(
+        default=False,
+        metadata={"help": "make masked dataset method"},
+    )
+    masking_type: str = field(
+        default="mask",
+        metadata={"help": "choose type of dataset you are going to make (mask , hard)"},
+    )
     curriculum_learn: bool = field(
         default=False,
         metadata={"help": "Use curriculum learning method"},
