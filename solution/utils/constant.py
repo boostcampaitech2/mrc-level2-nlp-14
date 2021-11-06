@@ -34,5 +34,3 @@ MRC_PREDICT_FEATURES = Features(
         "question": Value(dtype="string", id=None),
     }
 )
-
-

@@ -23,12 +23,12 @@ class RobertaClassificationHead(nn.Module):
         x = self.dropout(x)
         x = self.out_proj(x)
         return x
-    
+
 
 class RobertaForCharNER(RobertaPreTrainedModel):
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids"]
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.num_labels = config.num_labels
@@ -37,7 +37,7 @@ class RobertaForCharNER(RobertaPreTrainedModel):
         self.classifier = RobertaClassificationHead(config)
 
         self.init_weights()
-        
+
     def forward(
         self,
         input_ids=None,
@@ -52,7 +52,7 @@ class RobertaForCharNER(RobertaPreTrainedModel):
         return_dict=None,
     ):
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-        
+
         outputs = self.roberta(
             input_ids,
             attention_mask=attention_mask,
@@ -66,7 +66,7 @@ class RobertaForCharNER(RobertaPreTrainedModel):
         )
         sequence_output = outputs[0]
         logits = self.classifier(sequence_output)
-        
+
         loss = None
         if labels is not None:
             loss_fct = nn.CrossEntropyLoss()
@@ -75,11 +75,13 @@ class RobertaForCharNER(RobertaPreTrainedModel):
                 active_loss = attention_mask.view(-1) == 1
                 active_logits = logits.view(-1, self.num_labels)
                 active_labels = torch.where(
-                    active_loss, labels.view(-1), torch.tensor(loss_fct.ignore_index).type_as(labels)
+                    active_loss, labels.view(-1), torch.tensor(
+                        loss_fct.ignore_index).type_as(labels)
                 )
                 loss = loss_fct(active_logits, active_labels)
             else:
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(
+                    logits.view(-1, self.num_labels), labels.view(-1))
 
         if not return_dict:
             output = (logits,) + outputs[2:]

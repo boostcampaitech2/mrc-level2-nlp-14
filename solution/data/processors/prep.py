@@ -11,6 +11,7 @@ DENOISE_FUNC = {
     "sentence_permutation": permute_sentences,
 }
 
+
 def remove_special_token(examples):
     """
     Remove special tokens in data v3
@@ -28,13 +29,13 @@ def remove_special_token(examples):
     question = []
     title = []
 
-    for i in range(len(examples['context'])):    
+    for i in range(len(examples['context'])):
         sentence_list = examples['context'][i].split('#')
         result = sentence_list.copy()
 
         result = ' '.join(sentence_list)
         index = result.find('[ANSWER]')
-        result = re.sub('\[ANSWER\]','',result)
+        result = re.sub('\[ANSWER\]', '', result)
 
         answer = examples['answers'][i]
         answer['answer_start'][0] = index
@@ -53,11 +54,13 @@ def remove_special_token(examples):
             'question': question,
             'title': title}
 
+
 def get_extractive_features(tokenizer, mode, data_args):
-    
+
     def tokenize_fn(examples):
         pad_on_right = tokenizer.padding_side == "right"
-        max_seq_length = min(data_args.max_seq_length, tokenizer.model_max_length)
+        max_seq_length = min(data_args.max_seq_length,
+                             tokenizer.model_max_length)
 
         # truncation과 padding을 통해 tokenization을 진행
         # stride를 이용하여 overflow를 유지
@@ -110,7 +113,8 @@ def get_extractive_features(tokenizer, mode, data_args):
         # denoising
         if 'v3' in data_args.dataset_version:
             if data_args.denoising_func:
-                examples = DENOISE_FUNC[data_args.denoising_func](examples, data_args)
+                examples = DENOISE_FUNC[data_args.denoising_func](
+                    examples, data_args)
             else:
                 examples = remove_special_token(examples)
 
@@ -176,21 +180,22 @@ def get_extractive_features(tokenizer, mode, data_args):
 
                     # token_start_index를 실제 위치로 맞춰주는 과정
                     while (
-                        token_start_index < len(offsets) and 
+                        token_start_index < len(offsets) and
                         offsets[token_start_index][0] <= start_char
                     ):
                         token_start_index += 1
-                    
-                    tokenized_examples["start_positions"].append(token_start_index - 1)
+
+                    tokenized_examples["start_positions"].append(
+                        token_start_index - 1)
 
                     # token_end_index를 실제 위치로 맞춰주는 과정
                     while offsets[token_end_index][1] >= end_char:
                         token_end_index -= 1
-                    
-                    tokenized_examples["end_positions"].append(token_end_index + 1)
+
+                    tokenized_examples["end_positions"].append(
+                        token_end_index + 1)
 
         return tokenized_examples
-    
 
     def prepare_validation_features(examples, retriever=None):
         pad_on_right = tokenizer.padding_side == "right"
@@ -203,7 +208,6 @@ def get_extractive_features(tokenizer, mode, data_args):
 
         if data_args.underline == True:
             tokenized_examples = get_underline_embedding(tokenized_examples)
-
 
         sample_mapping = tokenized_examples.pop("overflow_to_sample_mapping")
 
@@ -218,7 +222,8 @@ def get_extractive_features(tokenizer, mode, data_args):
 
             # 하나의 example이 여러 개의 span을 가질 수 있음
             sample_index = sample_mapping[i]
-            tokenized_examples["example_id"].append(examples["id"][sample_index])
+            tokenized_examples["example_id"].append(
+                examples["id"][sample_index])
 
             tokenized_examples["offset_mapping"][i] = [
                 (o if sequence_ids[k] == context_index else None)
@@ -226,17 +231,17 @@ def get_extractive_features(tokenizer, mode, data_args):
             ]
 
         return tokenized_examples
-    
+
     def identity(examples):
         return examples
-    
+
     if mode == "train":
         get_features_fn = prepare_train_features
     elif mode == "eval":
         get_features_fn = prepare_validation_features
     elif mode == "test":
         get_features_fn = prepare_validation_features
-    
+
     return get_features_fn, True
 
 
@@ -253,7 +258,7 @@ def get_generative_features(tokenizer, mode, data_args):
         )
         output.update({"example_id": [e_id for e_id in examples["id"]]})
         return output
-    
+
     def tokenize_fn_labels(examples):
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
         with tokenizer.as_target_tokenizer():
@@ -264,17 +269,17 @@ def get_generative_features(tokenizer, mode, data_args):
                 truncation=True,
             )["input_ids"]
         return labels
-    
+
     def prepare_train_features(examples):
         tokenized_examples = tokenize_fn(examples)
         labels = tokenize_fn_labels(examples)
         tokenized_examples.update({"labels": labels})
         return tokenized_examples
-    
+
     def prepare_test_features(examples):
         tokenized_examples = tokenize_fn(examples)
         return tokenized_examples
-    
+
     if mode == "train":
         get_features_fn = prepare_train_features
     elif mode == "eval":
@@ -324,10 +329,10 @@ def get_ensemble_features(tokenizer, mode, data_args):
         for i, offsets in enumerate(offset_mapping):
             input_ids = tokenized_examples["input_ids"][i]
             cls_index = input_ids.index(tokenizer.cls_token_id)  # cls index
-            sep_index = input_ids.index(tokenizer.sep_token_id) # sep index
+            sep_index = input_ids.index(tokenizer.sep_token_id)  # sep index
 
-            offsets[cls_index] = (0, 0) # 필수!
-            offsets[sep_index] = (0, 0) # 필수!
+            offsets[cls_index] = (0, 0)  # 필수!
+            offsets[sep_index] = (0, 0)  # 필수!
 
             sequence_ids = tokenized_examples.sequence_ids(i)
             answers = examples[ANSWER_COLUMN_NAME][i]
@@ -339,7 +344,7 @@ def get_ensemble_features(tokenizer, mode, data_args):
             else:
                 start_char = answers["answer_start"][0]
                 end_char = start_char + len(answers["text"][0])
-                    
+
                 token_start_index = 0
                 while sequence_ids[token_start_index] == context_index:
                     token_start_index += 1
@@ -356,19 +361,20 @@ def get_ensemble_features(tokenizer, mode, data_args):
                     tokenized_examples["end_positions"].append(cls_index)
                 else:
                     while (
-                        token_start_index < len(offsets) and 
+                        token_start_index < len(offsets) and
                         offsets[token_start_index][0] <= start_char
                     ):
                         token_start_index += 1
-                    tokenized_examples["start_positions"].append(token_start_index - 1)
+                    tokenized_examples["start_positions"].append(
+                        token_start_index - 1)
 
                     while offsets[token_end_index][1] >= end_char:
                         token_end_index -= 1
-                    tokenized_examples["end_positions"].append(token_end_index + 1)
+                    tokenized_examples["end_positions"].append(
+                        token_end_index + 1)
 
         return tokenized_examples
 
-    
     def prepare_test_features(examples):
         pad_on_right = tokenizer.padding_side == "right"
         tokenized_examples = tokenize_fn(examples)
@@ -379,12 +385,12 @@ def get_ensemble_features(tokenizer, mode, data_args):
             context_index = 0 if pad_on_right else 1
             tokenized_examples["example_id"].append(examples["id"][i])
             tokenized_examples["offset_mapping"][i] = [
-                (o if sequence_ids[k] != context_index and input_ids[k] != tokenizer.pad_token_id else None)
+                (o if sequence_ids[k] != context_index and input_ids[k]
+                 != tokenizer.pad_token_id else None)
                 for k, o in enumerate(tokenized_examples["offset_mapping"][i])
             ]
 
         return tokenized_examples
-
 
     if mode == "train":
         get_features_fn = prepare_train_features
@@ -399,5 +405,5 @@ def get_ensemble_features(tokenizer, mode, data_args):
 PREP_PIPELINE = {
     "extractive": get_extractive_features,
     "generative": get_generative_features,
-    "ensemble" : get_ensemble_features,
+    "ensemble": get_ensemble_features,
 }

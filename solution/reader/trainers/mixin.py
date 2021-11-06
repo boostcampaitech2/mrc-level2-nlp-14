@@ -2,7 +2,7 @@ import torch
 
 
 class ToMixin:
-    
+
     def _optimizer_to(self, device="cpu"):
         # https://github.com/pytorch/pytorch/issues/8741
         for param in self.optimizer.state.values():
@@ -16,8 +16,9 @@ class ToMixin:
                     if isinstance(subparam, torch.Tensor):
                         subparam.data = subparam.data.to(device)
                         if subparam._grad is not None:
-                            subparam._grad.data = subparam._grad.data.to(device)
-        
+                            subparam._grad.data = subparam._grad.data.to(
+                                device)
+
     def _scheduler_to(self, device="cpu"):
         # https://github.com/pytorch/pytorch/issues/8741
         for param in self.lr_scheduler.__dict__.values():

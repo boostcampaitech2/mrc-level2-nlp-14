@@ -10,7 +10,7 @@ from ...args import (
 
 class DataProcessor:
     """ Base class for data converters """
-    
+
     def __init__(
         self,
         data_args: DataArguments,
@@ -20,7 +20,7 @@ class DataProcessor:
         self.data_args = data_args
         self.model_args = model_args
         self.training_args = training_args
-    
+
     def get_train_examples(self, data_dir):
         """Gets a collection of :class:`InputExample` for the train set."""
         raise NotImplementedError()

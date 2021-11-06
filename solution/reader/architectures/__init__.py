@@ -41,11 +41,11 @@ def _get_model(
         use_auth_token=model_args.use_auth_token,
         revision=model_args.revision,
     )
-    return model    
+    return model
 
 
 def basic(
-    model_args: ModelArguments, 
+    model_args: ModelArguments,
     default_model: PreTrainedModel,
     tokenizer: PreTrainedTokenizer,
 ):
@@ -71,6 +71,7 @@ def add_qaconv_head(
 
     model = _get_model(model_args, default_model, config)
     return model
+
 
 MODEL_INIT = {
     "basic": basic,

@@ -13,6 +13,7 @@ head -> model_head
 conv_out_channel -> qa_conv_out_channel
 """
 
+
 @dataclass
 class ModelingArguments(ModelArguments):
     """
@@ -20,7 +21,8 @@ class ModelingArguments(ModelArguments):
     """
     model_name_or_path: str = field(
         default="klue/bert-base",
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     reader_type: str = field(
         default="extractive",
@@ -60,8 +62,8 @@ class ModelingArguments(ModelArguments):
         default="main",
         metadata={"help": ""}
     )
-    
-    
+
+
 @dataclass
 class ModelHeadArguments(ModelingArguments):
     # 어떻게 구분지을지 고민하기
@@ -75,14 +77,14 @@ class ModelHeadArguments(ModelingArguments):
     )
     qa_conv_input_size: int = field(
         default=512,
-        metadata={"help":""},
+        metadata={"help": ""},
     )
     qa_conv_n_layers: int = field(
         default=5,
-        metadata={"help":""},
+        metadata={"help": ""},
     )
-    
-    
+
+
 @dataclass
 class MrcModelArguments(ModelHeadArguments):
     pass

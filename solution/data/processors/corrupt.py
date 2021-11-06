@@ -2,6 +2,7 @@ import torch
 import math
 import re
 
+
 def permute_sentences(examples, data_args, p=1.0):
     """
     Permutate sentences
@@ -35,23 +36,24 @@ def permute_sentences(examples, data_args, p=1.0):
         ordering = torch.arange(0, num_sentences)
         ordering[substitutions] = substitutions[torch.randperm(num_to_permute)]
 
-        result = ' '.join([sentence_list[ordering[j]] for j in range(len(sentence_list))])
+        result = ' '.join([sentence_list[ordering[j]]
+                          for j in range(len(sentence_list))])
         index = result.find('[ANSWER]')
-        result = re.sub('\[ANSWER\]','',result)
+        result = re.sub('\[ANSWER\]', '', result)
 
         answer = examples['answers']
-        answer['answer_start'][0] = index       
-        
+        answer['answer_start'][0] = index
+
         return {'answers': answer,
-            'context': result,
-            'document_id': examples['document_id'],
-            'id': examples['id'],
-            'question': examples['question'],
-            'title': examples['title']}
-    
+                'context': result,
+                'document_id': examples['document_id'],
+                'id': examples['id'],
+                'question': examples['question'],
+                'title': examples['title']}
+
     # batch
     else:
-        for i in range(len(examples['context'])):    
+        for i in range(len(examples['context'])):
             sentence_list = examples['context'][i].split('#')
             result = sentence_list.copy()
 
@@ -59,11 +61,13 @@ def permute_sentences(examples, data_args, p=1.0):
             num_to_permute = math.ceil((num_sentences * 2 * p) / 2.0)
             substitutions = torch.randperm(num_sentences)[:num_to_permute]
             ordering = torch.arange(0, num_sentences)
-            ordering[substitutions] = substitutions[torch.randperm(num_to_permute)]
+            ordering[substitutions] = substitutions[torch.randperm(
+                num_to_permute)]
 
-            result = ' '.join([sentence_list[ordering[j]] for j in range(len(sentence_list))])
+            result = ' '.join([sentence_list[ordering[j]]
+                              for j in range(len(sentence_list))])
             index = result.find('[ANSWER]')
-            result = re.sub('\[ANSWER\]','',result)
+            result = re.sub('\[ANSWER\]', '', result)
 
             answer = examples['answers'][i]
             answer['answer_start'][0] = index

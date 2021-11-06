@@ -22,36 +22,36 @@ Tokenizer = TypeVar("Tokenizer")
 class SparseRetrieval(RetrievalBase):
     """
     Base class for Sparse Retrieval module.
-    
+
     Main Method:
         get_query_embedding
         get_topk_documents
-        
+
     Abstract Method
         vectorize
         calculate_scores
     """
-    
+
     def __init__(self, args: MrcDataArguments):
         super().__init__(args)
         self.name = args.retrieval_name
-    
+
     @property
     def vectorizer(self):
         return self._vectorizer
-    
+
     @vectorizer.setter
     def vectorizer(self, val):
         self._vectorizer = val
-    
+
     @abc.abstractmethod
     def vectorize(self, contexts):
         pass
-    
+
     @abc.abstractmethod
     def calculate_scores(self, query_embedding, passage_embedding):
         pass
-    
+
     def set_tokenizer(self) -> Tokenizer:
         if self.tokenizer_name == "mecab":
             tokenizer = Mecab()
@@ -62,7 +62,7 @@ class SparseRetrieval(RetrievalBase):
         else:
             tokenizer = AutoTokenizer.from_pretrained(self.tokenizer_name)
         return tokenizer
-    
+
     @property
     def tokenize_fn(self):
         try:
@@ -75,7 +75,7 @@ class SparseRetrieval(RetrievalBase):
         else:
             tokenize_fn = self._tokenizer.tokenize
         return tokenize_fn
-    
+
     @timer(dataset=True)
     def get_relevant_doc(
         self,
@@ -86,7 +86,7 @@ class SparseRetrieval(RetrievalBase):
     ) -> Tuple[List, List]:
         return super().get_relevant_doc(query_or_dataset,
                                         topk, use_faiss, **kwargs)
-    
+
     @timer(dataset=False)
     def get_query_embedding(self, query_or_dataset: Union[str, Dataset]) -> csr_matrix:
         if isinstance(query_or_dataset, Dataset):
@@ -96,17 +96,17 @@ class SparseRetrieval(RetrievalBase):
         query_emb = self.vectorizer.transform(query)
         assert np.sum(query_emb) != 0
         return query_emb
-    
+
     def get_passage_embedding(self):
         cls_name = self.__class__.__name__
         pickle_name = f"{cls_name}_embedding.bin"
         vectorizer_path = f"{cls_name}_vectorizer.bin"
         emb_path = os.path.join(self.dataset_path, pickle_name)
         vectorizer_path = os.path.join(self.dataset_path, vectorizer_path)
-        
+
         if (not self.args.rebuilt_index and
-            os.path.isfile(emb_path) and 
-            os.path.isfile(vectorizer_path)):
+            os.path.isfile(emb_path) and
+                os.path.isfile(vectorizer_path)):
             with open(emb_path, "rb") as file:
                 self._p_embedding = pickle.load(file)
             with open(vectorizer_path, "rb") as file:
@@ -121,13 +121,13 @@ class SparseRetrieval(RetrievalBase):
                 pickle.dump(self.vectorizer, file)
             print("Embedding pickle saved.")
             self.args.rebuilt_index = False
-                
+
         return self.p_embedding
-    
+
     @timer(dataset=False)
     def get_topk_documents(
-        self, 
-        query_embs: Union[csr_matrix, np.ndarray], 
+        self,
+        query_embs: Union[csr_matrix, np.ndarray],
         topk: int,
         use_faiss: bool,
     ) -> Tuple[Nested_List, Nested_List]:
@@ -145,11 +145,11 @@ class SparseRetrieval(RetrievalBase):
             doc_scores.append(result[sorted_result].tolist()[:topk])
             doc_indices.append(sorted_result.tolist()[:topk])
         return doc_scores, doc_indices
-        
+
     def get_topk_documents_with_faiss(self, query_embs, topk):
         """
         Get top-k similarity among query and documents with faiss
-        
+
         Arguments:
             query_emb (Union[csr_matrix, np.ndarray]):
         Returns:
@@ -161,7 +161,7 @@ class SparseRetrieval(RetrievalBase):
         query_embs = query_embs.toarray().astype(np.float32)
         doc_scores, doc_indices = self.indexer.search(query_embs, topk)
         return doc_scores, doc_indices
-    
+
     def get_topk_documents_bulk(self, query_embs,  topk):
         result = self.calculate_scores(query_embs, self.p_embedding)
         if not isinstance(result, np.ndarray):

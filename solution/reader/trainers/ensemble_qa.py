@@ -18,6 +18,7 @@ if version.parse(torch.__version__) >= version.parse("1.6"):
 
 _hf_deepspeed_config_weak_ref = None
 
+
 def is_deepspeed_zero3_enabled():
     if _hf_deepspeed_config_weak_ref is not None and _hf_deepspeed_config_weak_ref() is not None:
         return _hf_deepspeed_config_weak_ref().is_zero3()
@@ -26,17 +27,18 @@ def is_deepspeed_zero3_enabled():
 
 
 class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
-    
+
     def __init__(
-        self, 
+        self,
         *args,
-        eval_examples: datasets.Dataset = None, 
+        eval_examples: datasets.Dataset = None,
         post_process_function: Callable = None,
         **kwargs
     ):
-        super().__init__(*args, eval_examples=eval_examples, post_process_function=post_process_function, **kwargs)
+        super().__init__(*args, eval_examples=eval_examples,
+                         post_process_function=post_process_function, **kwargs)
         self.label_names = ["start_positions", "end_positions", "labels"]
-    
+
     def prediction_step(
         self,
         model: nn.Module,
@@ -67,7 +69,8 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
         )
         # in case the batch is shorter than max length, the output should be padded
         if generated_tokens.shape[-1] < gen_kwargs["max_length"]:
-            generated_tokens = self._pad_tensors_to_max_len(generated_tokens, gen_kwargs["max_length"])
+            generated_tokens = self._pad_tensors_to_max_len(
+                generated_tokens, gen_kwargs["max_length"])
 
         with torch.no_grad():
             if self.use_amp:
@@ -77,9 +80,11 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
                 outputs = model(**inputs)
             if has_labels:
                 if self.label_smoother is not None:
-                    loss = self.label_smoother(outputs, inputs["labels"]).mean().detach()
+                    loss = self.label_smoother(
+                        outputs, inputs["labels"]).mean().detach()
                 elif "loss" in outputs:
-                    loss = (outputs["loss"] if isinstance(outputs, dict) else outputs[0]).mean().detach()
+                    loss = (outputs["loss"] if isinstance(
+                        outputs, dict) else outputs[0]).mean().detach()
                 else:
                     loss = None
             else:
@@ -91,7 +96,8 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
         if has_labels:
             labels = inputs["labels"]
             if labels.shape[-1] < gen_kwargs["max_length"]:
-                labels = self._pad_tensors_to_max_len(labels, gen_kwargs["max_length"])
+                labels = self._pad_tensors_to_max_len(
+                    labels, gen_kwargs["max_length"])
         else:
             labels = None
 

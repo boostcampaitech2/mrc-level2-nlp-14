@@ -39,18 +39,20 @@ class DataPathArguments(DataArguments):
     )
     masking_type: str = field(
         default="mask",
-        metadata={"help": "choose type of dataset you are going to make (mask , hard)"},
+        metadata={
+            "help": "choose type of dataset you are going to make (mask , hard)"},
     )
     curriculum_learn: bool = field(
         default=False,
         metadata={"help": "Use curriculum learning method"},
     )
     curriculum_split_name: Optional[str] = field(
-        default="./data/aistage-mrc/train_dataset", 
-        metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
+        default="./data/aistage-mrc/train_dataset",
+        metadata={
+            "help": "The name of the dataset split to use(for curriculum learning)"},
     )
-    
-    
+
+
 @dataclass
 class TokenizerArguments(DataPathArguments):
     max_seq_length: int = field(
@@ -62,9 +64,9 @@ class TokenizerArguments(DataPathArguments):
     )
 
     max_label_length: int = field(
-        default= 128,
-        metadata = {
-             "help": "The maximum label length after tokenization. Sequences longer "
+        default=128,
+        metadata={
+            "help": "The maximum label length after tokenization. Sequences longer "
         }
     )
 
@@ -92,7 +94,8 @@ class TokenizerArguments(DataPathArguments):
 class HighlightingArguments(TokenizerArguments):
     do_underline: bool = field(
         default=False,
-        metadata={"help": "Whether to add underline embedding at the time of tokenizing or not"},
+        metadata={
+            "help": "Whether to add underline embedding at the time of tokenizing or not"},
     )
     do_punctuation: bool = field(
         default=False,
@@ -100,7 +103,8 @@ class HighlightingArguments(TokenizerArguments):
     )
     punct_model_name_or_path: str = field(
         default="./outputs/run_test",
-        metadata={"help": "Path to pretrained model or model identifier from huggingface.co/models"}
+        metadata={
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"}
     )
     punct_max_seq_length: int = field(
         default=100,
@@ -123,7 +127,8 @@ class HighlightingArguments(TokenizerArguments):
             "help": "Define how many top-k sentences to retrieve based on similarity."
         },
     )
-        
+
+
 @dataclass
 class RetrievalArguments(HighlightingArguments):
     retrieval_mode: str = field(
@@ -151,7 +156,7 @@ class RetrievalArguments(HighlightingArguments):
         metadata={"help": "Max features used for TF-IDF Vectorizer."}
     )
     sp_ngram_range: List[int] = lambda_field(
-        default=[1,2],
+        default=[1, 2],
         metadata={"help": "N-gram range used for TF-IDF Vectorizer."}
     )
     top_k_retrieval: int = field(
@@ -166,14 +171,15 @@ class RetrievalArguments(HighlightingArguments):
     )
     eval_retrieval: bool = field(
         default=True,
-        metadata={"help": "Whether to run passage retrieval using sparse embedding."},
+        metadata={
+            "help": "Whether to run passage retrieval using sparse embedding."},
     )
     num_clusters: int = field(
         default=64,
         metadata={"help": "Define how many clusters to use for faiss."}
     )
 
-        
+
 @dataclass
 class ElasticSearchArguments(RetrievalArguments):
     index_name: str = field(
@@ -272,7 +278,7 @@ class ElasticSearchArguments(RetrievalArguments):
         default=0.1,
         metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
     )
-    
+
 
 @dataclass
 class DenoisingArguments(ElasticSearchArguments):

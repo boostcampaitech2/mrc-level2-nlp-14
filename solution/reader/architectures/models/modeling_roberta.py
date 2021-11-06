@@ -12,7 +12,7 @@ from transformers import (
     RobertaModel,
 )
 from transformers.modeling_outputs import (
-    QuestionAnsweringModelOutput, 
+    QuestionAnsweringModelOutput,
     BaseModelOutputWithPoolingAndCrossAttentions
 )
 from ..modeling_heads import (
@@ -24,7 +24,7 @@ from ..modeling_heads import (
 
 class RobertaForQA(RobertaForQuestionAnswering):
     reader_type: str = "extractive"
-    
+
     def __init__(self, config):
         super().__init__(config)
         assert config.reader_type == self.reader_type
@@ -32,15 +32,15 @@ class RobertaForQA(RobertaForQuestionAnswering):
 
 class RobertaForQAWithConvSDSHead(RobertaForQuestionAnswering):
     reader_type: str = "extractive"
-    
+
     def __init__(self, config):
         # Initialize on RobertaPreTrainedModel
         super(RobertaForQuestionAnswering, self).__init__(config)
         assert config.reader_type == self.reader_type
-        
+
         config.num_labels = 2
         self.num_labels = config.num_labels
-        
+
         self.roberta = RobertaModel(config, add_pooling_layer=False)
         self.qa_outputs = QAConvSDSHead(
             config.qa_conv_input_size,
@@ -48,16 +48,16 @@ class RobertaForQAWithConvSDSHead(RobertaForQuestionAnswering):
             config.qa_conv_n_layers,
             config.num_labels,
         )
-        
+
         self.init_weights()
-        
+
 
 class RobertaForQAWithConvHead(RobertaPreTrainedModel):
     """
     Roberta model for QA with conv head
     """
     reader_type: str = "extractive"
-    
+
     def __init__(self, config):
         """
         Args:
@@ -66,28 +66,29 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
         super().__init__(config)
         assert config.reader_type == self.reader_type
         assert hasattr(config, "sep_token_id")
-        
+
         config.num_labels = 2
         self.sep_token_id = config.sep_token_id
         self.num_labels = config.num_labels
-        
+
         self.roberta = RobertaModel(config, add_pooling_layer=False)
         if config.model_head == "conv":
             head_cls = QAConvHead
         else:
             head_cls = QAConvHeadWithAttention
         self.qa_outputs = head_cls(config)
-        
+
         self.init_weights()
-        
+
     def make_token_type_ids(self, input_ids):
         token_type_ids = []
         for i, input_id in enumerate(input_ids):
             sep_idx = np.where(input_id.cpu().numpy() == self.sep_token_id)
-            token_type_id = [0]*sep_idx[0][0] + [1]*(len(input_id)-sep_idx[0][0])
+            token_type_id = [0]*sep_idx[0][0] + \
+                [1]*(len(input_id)-sep_idx[0][0])
             token_type_ids.append(token_type_id)
         return torch.LongTensor(token_type_ids).to(input_ids.device)
-        
+
     def forward(
         self,
         input_ids=None,
@@ -117,7 +118,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
         )
 
         sequence_output = outputs[0]
-        
+
         token_type_ids = self.make_token_type_ids(input_ids)
         logits = self.qa_outputs(sequence_output, token_type_ids)
         start_logits, end_logits = logits.split(1, dim=-1)
@@ -164,15 +165,16 @@ class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
         self.underline_embeddings = nn.Embedding(2, config.hidden_size)
         self.config = config
 
-
     def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, underline_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
         if position_ids is None:
             if input_ids is not None:
-                position_ids = self._create_position_ids_from_input_ids(input_ids, self.padding_idx, past_key_values_length)
+                position_ids = self._create_position_ids_from_input_ids(
+                    input_ids, self.padding_idx, past_key_values_length)
             else:
-                position_ids = self.create_position_ids_from_inputs_embeds(inputs_embeds)
+                position_ids = self.create_position_ids_from_inputs_embeds(
+                    inputs_embeds)
 
         if input_ids is not None:
             input_shape = input_ids.size()
@@ -184,10 +186,12 @@ class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
         if token_type_ids is None:
             if hasattr(self, "token_type_ids"):
                 buffered_token_type_ids = self.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(input_shape[0], seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(
+                    input_shape[0], seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.position_ids.device)
+                token_type_ids = torch.zeros(
+                    input_shape, dtype=torch.long, device=self.position_ids.device)
 
         if inputs_embeds is None:
             inputs_embeds = self.word_embeddings(input_ids)
@@ -207,12 +211,13 @@ class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
 
     def _create_position_ids_from_input_ids(self, input_ids, padding_idx, past_key_values_length=0):
         mask = input_ids.ne(padding_idx).int()
-        incremental_indices = (torch.cumsum(mask, dim=1).type_as(mask) + past_key_values_length) * mask
+        incremental_indices = (torch.cumsum(mask, dim=1).type_as(
+            mask) + past_key_values_length) * mask
         return incremental_indices.long() + padding_idx
 
 
 class RobertaModelWithUnderline(RobertaPreTrainedModel):
-    
+
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     # Copied from transformers.models.bert.modeling_bert.BertModel.__init__ with Bert->Roberta
@@ -243,7 +248,7 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
         output_hidden_states=None,
         return_dict=None,
     ):
-        
+
         output_attentions = output_attentions if output_attentions is not None else self.config.output_attentions
         output_hidden_states = (
             output_hidden_states if output_hidden_states is not None else self.config.output_hidden_states
@@ -256,13 +261,15 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
             use_cache = False
 
         if input_ids is not None and inputs_embeds is not None:
-            raise ValueError("You cannot specify both input_ids and inputs_embeds at the same time")
+            raise ValueError(
+                "You cannot specify both input_ids and inputs_embeds at the same time")
         elif input_ids is not None:
             input_shape = input_ids.size()
         elif inputs_embeds is not None:
             input_shape = inputs_embeds.size()[:-1]
         else:
-            raise ValueError("You have to specify either input_ids or inputs_embeds")
+            raise ValueError(
+                "You have to specify either input_ids or inputs_embeds")
 
         batch_size, seq_length = input_shape
         device = input_ids.device if input_ids is not None else inputs_embeds.device
@@ -271,28 +278,36 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
         past_key_values_length = past_key_values[0][0].shape[2] if past_key_values is not None else 0
 
         if attention_mask is None:
-            attention_mask = torch.ones(((batch_size, seq_length + past_key_values_length)), device=device)
+            attention_mask = torch.ones(
+                ((batch_size, seq_length + past_key_values_length)), device=device)
 
         if token_type_ids is None:
             if hasattr(self.embeddings, "token_type_ids"):
                 buffered_token_type_ids = self.embeddings.token_type_ids[:, :seq_length]
-                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(batch_size, seq_length)
+                buffered_token_type_ids_expanded = buffered_token_type_ids.expand(
+                    batch_size, seq_length)
                 token_type_ids = buffered_token_type_ids_expanded
             else:
-                token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=device)
+                token_type_ids = torch.zeros(
+                    input_shape, dtype=torch.long, device=device)
 
-        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(attention_mask, input_shape, device)
+        extended_attention_mask: torch.Tensor = self.get_extended_attention_mask(
+            attention_mask, input_shape, device)
 
         if self.config.is_decoder and encoder_hidden_states is not None:
             encoder_batch_size, encoder_sequence_length, _ = encoder_hidden_states.size()
-            encoder_hidden_shape = (encoder_batch_size, encoder_sequence_length)
+            encoder_hidden_shape = (
+                encoder_batch_size, encoder_sequence_length)
             if encoder_attention_mask is None:
-                encoder_attention_mask = torch.ones(encoder_hidden_shape, device=device)
-            encoder_extended_attention_mask = self.invert_attention_mask(encoder_attention_mask)
+                encoder_attention_mask = torch.ones(
+                    encoder_hidden_shape, device=device)
+            encoder_extended_attention_mask = self.invert_attention_mask(
+                encoder_attention_mask)
         else:
             encoder_extended_attention_mask = None
 
-        head_mask = self.get_head_mask(head_mask, self.config.num_hidden_layers)
+        head_mask = self.get_head_mask(
+            head_mask, self.config.num_hidden_layers)
 
         embedding_output = self.embeddings(
             input_ids=input_ids,
@@ -315,7 +330,8 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
             return_dict=return_dict,
         )
         sequence_output = encoder_outputs[0]
-        pooled_output = self.pooler(sequence_output) if self.pooler is not None else None
+        pooled_output = self.pooler(
+            sequence_output) if self.pooler is not None else None
 
         if not return_dict:
             return (sequence_output, pooled_output) + encoder_outputs[1:]
@@ -343,13 +359,14 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
         config.num_labels = 2
         self.num_labels = config.num_labels
 
-        self.roberta = RobertaModelWithUnderline(config, add_pooling_layer=False)
+        self.roberta = RobertaModelWithUnderline(
+            config, add_pooling_layer=False)
         self.qa_outputs = QAConvSDSHead(
             config.qa_conv_input_size,
             config.hidden_size,
             config.qa_conv_n_layers,
             config.num_labels
-            )
+        )
         self.init_weights()
 
     def forward(
@@ -358,7 +375,7 @@ class RobertaForQAWithUnderline(RobertaPreTrainedModel):
         attention_mask=None,
         token_type_ids=None,
         position_ids=None,
-        underline_ids = None,
+        underline_ids=None,
         head_mask=None,
         inputs_embeds=None,
         start_positions=None,

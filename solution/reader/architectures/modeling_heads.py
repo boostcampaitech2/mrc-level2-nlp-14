@@ -6,10 +6,10 @@ from .modeling_utils import (
     ConvLayer,
     AttentionLayer
 )
-    
-    
+
+
 class QAConvSDSHead(nn.Module):
-    
+
     def __init__(
         self,
         input_size: int,
@@ -31,7 +31,7 @@ class QAConvSDSHead(nn.Module):
             convs.append(QAConvSDSLayer(input_size, hidden_dim))
         self.convs = nn.Sequential(*convs)
         self.qa_output = nn.Linear(hidden_dim, num_labels)
-    
+
     def forward(self, x):
         """
         Args:
@@ -42,12 +42,13 @@ class QAConvSDSHead(nn.Module):
         """
         out = self.convs(x)
         return self.qa_output(out)
-    
-    
+
+
 class QAConvHeadWithAttention(nn.Module):
     """
     QA conv head with attention
     """
+
     def __init__(self, config):
         """
         Args:
@@ -78,6 +79,7 @@ class QAConvHead(nn.Module):
     """
     Simple QA conv head
     """
+
     def __init__(self, config):
         """
         Args:

@@ -12,6 +12,7 @@ from solution.utils.constant import COLBERT_NAME
 
 class ColBERTEncoder(BertPreTrainedModel):
     """ ColBERT Encoder for query or passage embedding """
+
     def __init__(self, config, mask_punctuation, dim=128, similarity_metric="cosine"):
         super(ColBERTEncoder, self).__init__(config)
 
@@ -22,7 +23,8 @@ class ColBERTEncoder(BertPreTrainedModel):
         self.skiplist = {}
 
         if self.mask_punctuation:
-            self.tokenizer = BertTokenizerFast.from_pretrained("klue/bert-base")
+            self.tokenizer = BertTokenizerFast.from_pretrained(
+                "klue/bert-base")
             self.skiplist = {
                 w: True
                 for symbol in string.punctuation
@@ -40,19 +42,22 @@ class ColBERTEncoder(BertPreTrainedModel):
 
     def query(self, input_ids, attention_mask, token_type_ids=None):
         """ Return query embeddings """
-        input_ids, attention_mask = input_ids.to("cuda"), attention_mask.to("cuda")
+        input_ids, attention_mask = input_ids.to(
+            "cuda"), attention_mask.to("cuda")
         Q = self.bert(input_ids, attention_mask=attention_mask)[0]
         Q = self.linear(Q)
-        
+
         return torch.nn.functional.normalize(Q, p=2, dim=2)
 
     def doc(self, input_ids, attention_mask, token_type_ids=None, keep_dims=True):
         """ Return document(passage) embeddings """
-        input_ids, attention_mask = input_ids.to("cuda"), attention_mask.to("cuda")
+        input_ids, attention_mask = input_ids.to(
+            "cuda"), attention_mask.to("cuda")
         D = self.bert(input_ids, attention_mask=attention_mask)[0]
         D = self.linear(D)
 
-        mask = torch.tensor(self.mask(input_ids), device="cuda").unsqueeze(2).float()
+        mask = torch.tensor(self.mask(input_ids),
+                            device="cuda").unsqueeze(2).float()
         D = D * mask
 
         D = torch.nn.functional.normalize(D, p=2, dim=2)
@@ -60,7 +65,7 @@ class ColBERTEncoder(BertPreTrainedModel):
         if not keep_dims:
             D, mask = D.cpu().to(dtype=torch.float16), mask.cpu().bool().squeeze(-1)
             D = [d[mask[idx]] for idx, d in enumerate(D)]
-        
+
         return D
 
     def score(self, Q, D):
@@ -80,23 +85,26 @@ class ColBERTEncoder(BertPreTrainedModel):
         return (-1.0 * ((Q.unsqueeze(2) - D.unsqueeze(1)) ** 2).sum(-1)).max(-1).values.sum(-1)
 
     def mask(self, input_ids):
-        mask = [[(x not in self.skiplist) and (x != 0) for x in d] for d in input_ids.cpu().tolist()]
+        mask = [[(x not in self.skiplist) and (x != 0) for x in d]
+                for d in input_ids.cpu().tolist()]
         return mask
 
 
 class ColBERTRetrieval(DenseRetrieval):
     """ ColBERT Retrieval """
+
     def __init__(self, args: DataArguments):
         self.tokenizer_name = args.retrieval_tokenizer_name
-        self.colbert = torch.load(os.path.join(args.retrieval_model_path, f"{COLBERT_NAME}.pt"))
+        self.colbert = torch.load(os.path.join(
+            args.retrieval_model_path, f"{COLBERT_NAME}.pt"))
         self.colbert.eval()
         self.q_encoder = self.colbert.query
         self.p_encoder = self.colbert.doc
 
         super().__init__(args)
         self.k = args.top_k_retrieval
-        self.enable_batch = False # batch 사용 불가
-        self.args.use_faiss = False # faiss를 사용하지 않음
+        self.enable_batch = False  # batch 사용 불가
+        self.args.use_faiss = False  # faiss를 사용하지 않음
 
     def calculate_scores(self, q_embeddings, p_embeddings):
         """ Calculate similarity scores between query and passage embeddings

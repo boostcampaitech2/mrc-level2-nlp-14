@@ -15,6 +15,7 @@ from .prep import remove_special_token
 
 logger = logging.get_logger(__name__)
 
+
 def convert_examples_to_features(
     processor: DataProcessor,
     tokenizer: PreTrainedTokenizer,
@@ -44,7 +45,7 @@ def convert_examples_to_features(
         eval_mode = mode == "eval"
         dataset = retriever.retrieve(dataset, topk=topk, eval_mode=eval_mode)
         prep_fn = partial(prep_fn, retriever=retriever)
-    
+
     features = dataset.map(
         prep_fn,
         batched=is_batched,
@@ -61,7 +62,7 @@ def convert_examples_to_features(
             num_proc=processor.data_args.preprocessing_num_workers,
             load_from_cache_file=not processor.data_args.overwrite_cache,
         )
-            
+
     return features, dataset
 
 
@@ -70,18 +71,21 @@ class OdqaProcessor(DataProcessor):
         dataset_path = self.data_args.dataset_path
 
         if self.data_args.curriculum_learn:
-            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))[self.data_args.curriculum_split_name]
+            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))[
+                self.data_args.curriculum_split_name]
         else:
-            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["train"]
+            input_data = load_from_disk(os.path.join(
+                dataset_path, "train_dataset"))["train"]
         return input_data
 
     def get_eval_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["validation"]
+        input_data = load_from_disk(os.path.join(
+            dataset_path, "train_dataset"))["validation"]
         return input_data
 
     def get_test_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(dataset_path, "test_dataset"))["validation"]
+        input_data = load_from_disk(os.path.join(
+            dataset_path, "test_dataset"))["validation"]
         return input_data
-        

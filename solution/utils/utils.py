@@ -28,9 +28,10 @@ logger = logging.get_logger(__name__)
 def _check_usage_of_cpu_and_memory():
     pid = os.getpid()
     py = psutil.Process(pid)
-    cpu_usage   = os.popen("ps aux | grep " + str(pid) + " | grep -v grep | awk '{print $3}'").read()
-    cpu_usage   = cpu_usage.replace("\n","")
-    memory_usage  = round(py.memory_info()[0] /2.**30, 2)
+    cpu_usage = os.popen("ps aux | grep " + str(pid) +
+                         " | grep -v grep | awk '{print $3}'").read()
+    cpu_usage = cpu_usage.replace("\n", "")
+    memory_usage = round(py.memory_info()[0] / 2.**30, 2)
     print("cpu usage\t\t:", cpu_usage, "%")
     print("memory usage\t\t:", memory_usage, "%")
     print("cuda memory allocated\t:", torch.cuda.memory_allocated())
@@ -41,6 +42,7 @@ def timer(dataset: bool = True):
     def decorator(func: Callable):
         """ Time decorator """
         flag = True if dataset else False
+
         def wrap_func(self, query_or_dataset: Union[str, Dataset], *args, **kwargs):
             dataset_cond = isinstance(query_or_dataset, Dataset) and flag
             str_cond = isinstance(query_or_dataset, str) and not flag

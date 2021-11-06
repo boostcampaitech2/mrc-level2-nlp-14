@@ -3,12 +3,12 @@ import math
 from typing import Optional, List, Dict, Callable
 
 from transformers import (
-    is_datasets_available, 
+    is_datasets_available,
     is_torch_tpu_available,
 )
 from transformers.trainer_utils import (
-    PredictionOutput, 
-    speed_metrics, 
+    PredictionOutput,
+    speed_metrics,
     denumpify_detensorize,
 )
 from transformers.debug_utils import DebugOption
@@ -23,13 +23,13 @@ if is_torch_tpu_available():
     import torch_xla.core.xla_model as xm
     import torch_xla.debug.metrics as met
 
-    
+
 class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
-    
+
     def __init__(
-        self, 
-        *args, 
-        eval_examples: datasets.Dataset = None, 
+        self,
+        *args,
+        eval_examples: datasets.Dataset = None,
         post_process_function: Callable = None,
         **kwargs
     ):
@@ -37,7 +37,7 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
         self.eval_examples = eval_examples
         self.post_process_function = post_process_function
 
-    # TODO Add Generate feature 
+    # TODO Add Generate feature
     def evaluate(
         self,
         eval_dataset: Optional[datasets.Dataset] = None,
@@ -86,7 +86,7 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
                 tokenizer=self.tokenizer,
             )
             metrics = self.compute_metrics(eval_preds)
-            
+
             # To be JSON-serializable, we need to remove numpy types or zero-d tensors
             metrics = denumpify_detensorize(metrics)
 
@@ -94,7 +94,7 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
             for key in list(metrics.keys()):
                 if not key.startswith(f"{metric_key_prefix}_"):
                     metrics[f"{metric_key_prefix}_{key}"] = metrics.pop(key)
-            
+
             total_batch_size = self.args.eval_batch_size * self.args.world_size
             metrics.update(
                 speed_metrics(
@@ -115,15 +115,15 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
         self.control = self.callback_handler.on_evaluate(
             self.args, self.state, self.control, metrics
         )
-        
+
         self._memory_tracker.stop_and_update_metrics(metrics)
-        
+
         return metrics
 
     def predict(
-        self, 
-        test_dataset: datasets.Dataset, 
-        test_examples: datasets.Dataset, 
+        self,
+        test_dataset: datasets.Dataset,
+        test_examples: datasets.Dataset,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "test",
         mode: str = "test",
@@ -163,12 +163,12 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
             )
 
         predictions = self.post_process_function(
-            examples=test_examples, 
-            predictions=output.predictions, 
+            examples=test_examples,
+            predictions=output.predictions,
             training_args=self.args,
             tokenizer=self.tokenizer,
         )
-        
+
         # self._memory_tracker.stop_and_update_metrics(output.metrics)
-        
+
         return predictions

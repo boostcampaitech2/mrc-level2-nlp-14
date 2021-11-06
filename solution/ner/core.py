@@ -19,13 +19,14 @@ TODO
 - 영일중 ner 모델 포팅 및 적용
 """
 NER_FILES = {
-        "ko": dict(
-            label="./label.json",
-            vocab="./vocab.json",
-            wsd="./wsd.json",
-            model="jinmang2/roberta-ko-ner"
-        )
-    }
+    "ko": dict(
+        label="./label.json",
+        vocab="./vocab.json",
+        wsd="./wsd.json",
+        model="jinmang2/roberta-ko-ner"
+    )
+}
+
 
 class NERInterface:
     """
@@ -45,7 +46,8 @@ class NERInterface:
         vocab_file = filenames.pop("vocab", None)
         tokenizer = None
         if vocab_file is not None:
-            tokenizer = KoBpeTokenizer.from_file(os.path.join(path, vocab_file))
+            tokenizer = KoBpeTokenizer.from_file(
+                os.path.join(path, vocab_file))
         label_file = filenames.pop("label", None)
         label = None
         if label_file is not None:
@@ -241,7 +243,7 @@ class NERInterface:
         logits = self._model(**input_ids).logits
         results = logits[:, 1:-1:, :].argmax(dim=-1).cpu().numpy()
 
-        labelmap = lambda x: self.id2label[x + self.bpe.nspecial]
+        def labelmap(x): return self.id2label[x + self.bpe.nspecial]
         labels = np.vectorize(labelmap)(results)
         token_label_pairs = [
             [

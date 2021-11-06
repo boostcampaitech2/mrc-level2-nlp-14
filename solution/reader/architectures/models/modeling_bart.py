@@ -14,15 +14,15 @@ from ..modeling_outputs import Seq2SeqEnsembleModelOutput
 
 class BartForQuestionAnswering(QA):
     reader_type: str = "extractive"
-    
+
     def __init__(self, config):
         super().__init__(config)
         assert config.reader_type == self.reader_type
 
-        
+
 class BartForConditionalGeneration(CG):
     reader_type: str = "generative"
-    
+
     def __init__(self, config):
         super().__init__(config)
         assert config.reader_type == self.reader_type
@@ -30,15 +30,15 @@ class BartForConditionalGeneration(CG):
 
 class BartForQAWithConvSDSHead(QA):
     reader_type: str = "extractive"
-    
+
     def __init__(self, config):
         # Initialize on BartPretrainedModel
         super(BartForQuestionAnswering, self).__init__(config)
         assert config.reader_type == self.reader_type
-        
+
         config.num_labels = 2
         self.num_labels = config.num_labels
-        
+
         self.model = BartModel(config)
         self.qa_outputs = QAConvSDSHead(
             config.qa_conv_input_size,
@@ -46,7 +46,7 @@ class BartForQAWithConvSDSHead(QA):
             config.qa_conv_n_layers,
             config.num_labels,
         )
-        
+
         self.model._init_weights(self.qa_outputs)
 
 
@@ -56,7 +56,7 @@ class BartForExtractionGenerationEnsemble(CG):
     def __init__(self, config):
         super().__init__(config)
         assert config.reader_type == self.reader_type
-        
+
         config.num_labels = 2
         self.num_labels = config.num_labels
         self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
@@ -136,12 +136,14 @@ class BartForExtractionGenerationEnsemble(CG):
             end_loss = loss_fct(end_logits, end_positions)
             total_loss = (start_loss + end_loss) / 2
 
-        lm_logits = self.lm_head(outputs.last_hidden_state) + self.final_logits_bias
+        lm_logits = self.lm_head(
+            outputs.last_hidden_state) + self.final_logits_bias
 
         masked_lm_loss = None
         if labels is not None:
             loss_fct = CrossEntropyLoss()
-            masked_lm_loss = loss_fct(lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
+            masked_lm_loss = loss_fct(
+                lm_logits.view(-1, self.config.vocab_size), labels.view(-1))
 
         if not return_dict:
             ext_output = (

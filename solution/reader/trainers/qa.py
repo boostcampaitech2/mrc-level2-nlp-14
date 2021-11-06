@@ -3,12 +3,12 @@ import math
 from typing import Optional, List, Dict, Callable
 
 from transformers import (
-    is_datasets_available, 
+    is_datasets_available,
     is_torch_tpu_available,
 )
 from transformers.trainer_utils import (
-    PredictionOutput, 
-    speed_metrics, 
+    PredictionOutput,
+    speed_metrics,
     denumpify_detensorize,
 )
 from transformers.debug_utils import DebugOption
@@ -25,11 +25,11 @@ if is_torch_tpu_available():
 
 
 class QuestionAnsweringTrainer(BaseTrainer):
-    
+
     def __init__(
-        self, 
-        *args, 
-        eval_examples: datasets.Dataset = None, 
+        self,
+        *args,
+        eval_examples: datasets.Dataset = None,
         post_process_function: Callable = None,
         **kwargs
     ):
@@ -82,7 +82,7 @@ class QuestionAnsweringTrainer(BaseTrainer):
                 mode,
             )
             metrics = self.compute_metrics(eval_preds)
-            
+
             # To be JSON-serializable, we need to remove numpy types or zero-d tensors
             metrics = denumpify_detensorize(metrics)
 
@@ -90,7 +90,7 @@ class QuestionAnsweringTrainer(BaseTrainer):
             for key in list(metrics.keys()):
                 if not key.startswith(f"{metric_key_prefix}_"):
                     metrics[f"{metric_key_prefix}_{key}"] = metrics.pop(key)
-            
+
             total_batch_size = self.args.eval_batch_size * self.args.world_size
             metrics.update(
                 speed_metrics(
@@ -111,15 +111,15 @@ class QuestionAnsweringTrainer(BaseTrainer):
         self.control = self.callback_handler.on_evaluate(
             self.args, self.state, self.control, metrics
         )
-        
+
         self._memory_tracker.stop_and_update_metrics(metrics)
-        
+
         return metrics
 
     def predict(
-        self, 
-        test_dataset: datasets.Dataset, 
-        test_examples: datasets.Dataset, 
+        self,
+        test_dataset: datasets.Dataset,
+        test_examples: datasets.Dataset,
         ignore_keys: Optional[List[str]] = None,
         metric_key_prefix: str = "test",
         mode: str = "predict",
@@ -164,7 +164,7 @@ class QuestionAnsweringTrainer(BaseTrainer):
             self.args,
             mode,
         )
-        
+
         # self._memory_tracker.stop_and_update_metrics(output.metrics)
-        
+
         return predictions
