@@ -88,7 +88,16 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def get_underline_embedding(tokenized_examples):
-        """ Returns underline embedding when punctuation mode is on. """
+        """
+        Create underline_ids that flags sentences with high similarity scores to the question to 1 for underline embedding layer.
+        Punctuations are attached at the beginning and end of sentences with high similarity scores.
+
+        Args:
+            tokenized_examples (Dict): DatasetDict
+
+        Returns:
+            Dict: Tokenized examples of adding undeline_ids
+        """
 
         underline_ids = np.zeros_like(tokenized_examples['input_ids'])
 
