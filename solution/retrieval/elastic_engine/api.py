@@ -8,6 +8,12 @@ from .base import ElasticSearchBase
 class ESRetrieval(ElasticSearchBase):
 
     def __init__(self, args: DataArguments):
+        """[summary]
+
+        Args:
+            args (DataArguments): [description]
+        """
+
         es = Elasticsearch(args.es_host_address,
                            timeout=args.es_timeout,
                            max_retries=args.es_max_retries,
@@ -15,6 +21,17 @@ class ESRetrieval(ElasticSearchBase):
         super().__init__(args, es)
 
     def retrieve(self, query_or_dataset, topk=1, eval_mode=True):
+        """[summary]
+
+        Args:
+            query_or_dataset ([type]): [description]
+            topk (int, optional): [description]. Defaults to 1.
+            eval_mode (bool, optional): [description]. Defaults to True.
+
+        Returns:
+            [type]: [description]
+        """
+
         doc_scores, doc_indices, doc_contexts = self.get_relevant_doc(
             query_or_dataset, topk)
         if isinstance(query_or_dataset, str):
@@ -41,6 +58,15 @@ class ESRetrieval(ElasticSearchBase):
             return (doc_scores, doc_contexts)
 
     def get(self, id):
+        """[summary]
+
+        Args:
+            id ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         doc = self.engine.get(index=self.index_name, id=id)
         return doc["_source"]["document_text"]
 
@@ -49,13 +75,45 @@ class ESRetrieval(ElasticSearchBase):
         return self.engine.count(index=self.index_name)["count"]
 
     def analyze(self, query):
+        """[summary]
+
+        Args:
+            query ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         body = {"analyzer": "my_analyzer", "text": query}
         return self.engine.indices.analyze(index=self.index_name, body=body)
 
     def make_query(self, query, topk):
+        """[summary]
+
+        Args:
+            query ([type]): [description]
+            topk ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         return {"query": {"match": {"document_text": query}}, "size": topk}
 
     def get_relevant_doc(self, query_or_dataset, topk):
+        """[summary]
+
+        Args:
+            query_or_dataset ([type]): [description]
+            topk ([type]): [description]
+
+        Raises:
+            NotImplementedError: [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         if isinstance(query_or_dataset, Dataset):
             query = query_or_dataset["question"]
         elif isinstance(query_or_dataset, str):
