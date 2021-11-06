@@ -74,7 +74,6 @@ class OutputMixin:
             pd.DataFrame: [description]
         """
 
-        # Need to modifiy the arguement
         if self.args.do_punctuation == False:
             device = torch.device(
                 'cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -173,10 +172,16 @@ class OutputMixin:
         device
     ) -> str:
         """
-        Process retrieved topk wiki context
+        Remove unnecessary symbols from top-k wiki contexts.
+        If do_punctuation is True, 
+        put punctuations at the beginning and end of top-k sentences with high similarity scores to the question.
 
         Args:
-            contexts (List[str]): list of wiki contexts
+            contexts (List[str]): list of top-k wiki contexts
+            question (str): a question
+            sentece_encoder (str): Encoder for Encoding each sentence in the context and a question
+            tokenizer (AutoTokenizer): Tokenizer for text tokenization
+            device (torch.device): Setting up CUDA to use GPU
 
         Returns:
             str: joined wiki context
