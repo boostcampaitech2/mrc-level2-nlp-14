@@ -28,6 +28,13 @@ class ReaderBase:
         model_args: ModelArguments,
         tokenizer: PreTrainedTokenizer,
     ):
+        """[summary]
+
+        Args:
+            model_args (ModelArguments): [description]
+            tokenizer (PreTrainedTokenizer): [description]
+        """
+
         self._trainer = None
         self.model_args = model_args
         model_init = self.get_model_init_func(model_args.model_init)
@@ -39,6 +46,18 @@ class ReaderBase:
         )
 
     def get_model_init_func(self, model_init: str):
+        """[summary]
+
+        Args:
+            model_init (str): [description]
+
+        Raises:
+            AttributeError: [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         model_init = MODEL_INIT.get(model_init, None)
         if model_init is None:
             raise AttributeError
@@ -79,6 +98,15 @@ class ReaderBase:
         self.mode = _mode
 
     def num_examples(self, dataset: Dataset):
+        """[summary]
+
+        Args:
+            dataset (Dataset): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         return len(dataset)
 
     def save_trainer(self):
@@ -87,6 +115,15 @@ class ReaderBase:
         self._trainer.save_state()
 
     def save_metrics(self, split, metrics, dataset=None, combined=True):
+        """[summary]
+
+        Args:
+            split ([type]): [description]
+            metrics ([type]): [description]
+            dataset ([type], optional): [description]. Defaults to None.
+            combined (bool, optional): [description]. Defaults to True.
+        """
+
         logger.info("Save metrics")
         if dataset is not None:
             metrics[f"{split}_samples"] = self.num_examples(dataset)
@@ -94,6 +131,12 @@ class ReaderBase:
         self._trainer.save_metrics(split, metrics, combined=True)
 
     def read(self, *args, **kwargs):
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+
         assert self._trainer is not None
         assert not args
         logger.warning(f"***** {self.mode.title()} *****")
