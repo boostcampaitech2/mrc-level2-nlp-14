@@ -179,7 +179,7 @@ class OutputMixin:
         Args:
             contexts (List[str]): list of top-k wiki contexts
             question (str): a question
-            sentece_encoder (str): Encoder for Encoding each sentence in the context and a question
+            sentece_encoder (AutoModel): Encoder for Encoding each sentence in the context and a question
             tokenizer (AutoTokenizer): Tokenizer for text tokenization
             device (torch.device): Setting up CUDA to use GPU
 
