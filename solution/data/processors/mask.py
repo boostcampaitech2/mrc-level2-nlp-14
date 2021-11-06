@@ -165,7 +165,7 @@ def mask_word_with_ST(train_dataset, tokenizer):
         if tokenizer.pad_token_id in np.array(input_id):
             pad_idx = np.where(np.array(input_id) == tokenizer.pad_token_id)[0][0]
             
-        question = tokenizer.decode(input_id[1:sep_idx]) # sep_idx[0][0]: 첫 번째 sep 토큰 위치
+        question = tokenizer.decode(input_id[1:sep_idx]) # sep_idx[0][0]: the position of first [SEP] token
         answer  = tokenizer.decode(input_id[train_dataset['start_positions'][i]:train_dataset['end_positions'][i]+1])
     
         q_emb = model.encode(question)
@@ -245,8 +245,6 @@ def mask_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, tr
                 ignore_mask = labels.eq(ignore_token)
                 matrix.masked_fill_(ignore_mask, value=False)
             
-            # 0 -> token 단위
-            # 1 -> pooling layer 전체에 대한 embedding
             p_outputs = p_encoder(**p_inputs)[0]
             q_outputs = q_encoder(**q_inputs)[1]
             
@@ -407,16 +405,15 @@ def get_question_random_masking_dataset(train_data_path, save_path):
     for i in tqdm(range(train_dataset.num_rows)):
         text = train_dataset["question"][i]
         
-        # 단어 기준 Masking
+        # Masking tokens by words
         for word, pos in mecab.pos(text):
-            # 하나의 단어만 30% 확률로 Masking
+            # Masking word with 30% probability
             if pos in {"NNG", "NNP"} and (random.random() > 0.7):
                 context_list.append(train_dataset["context"][i])
-                question_list.append(re.sub(word, tokenizer.mask_token, text)) # tokenizer.mask_token
+                question_list.append(re.sub(word, tokenizer.mask_token, text))
                 id_list.append(train_dataset[i]["id"])
                 answer_list.append(train_dataset[i]["answers"])
     
-    # list를 Dataset 형태로 변환
     new_set = Dataset.from_dict({"id" : id_list,
                                         "context": context_list, 
                                         "question": question_list,
@@ -446,7 +443,6 @@ def get_ST_mask_dataset(train_data_path, save_path):
     tokenized_train_dataset = raw_train_dataset.map(
         _ext_prepare_train_features,
         batched=True,
-        #num_proc=4,
         remove_columns=column_names,
     )
     
@@ -455,7 +451,6 @@ def get_ST_mask_dataset(train_data_path, save_path):
     tokenized_valid_dataset = raw_val_dataset.map(
         _ext_prepare_validation_features,
         batched=True,
-        #num_proc=4,
         remove_columns=column_names,
     )
     
