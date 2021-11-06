@@ -34,7 +34,7 @@ logger = logging.get_logger(__name__)
 
 
 def make_bracket_pair(
-    text
+    text: str
 ):
     """If the beginning or end of the text is in brackets, but there is only one side, match the pair,
     and if '(' appears in the middle of the text but ')' does not appear at the end, remove the the back of '(' and return it.
@@ -290,12 +290,12 @@ def save_pred_json(
         else f"nbest_predictions_{prefix}.json",
     )
 
-    logger.info(f"Saving predictions to {prediction_file}.")
+    logger.warning(f"Saving predictions to {prediction_file}.")
     with open(prediction_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n"
         )
-    logger.info(f"Saving nbest_preds to {nbest_file}.")
+    logger.warning(f"Saving nbest_preds to {nbest_file}.")
     with open(nbest_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(all_nbest_json, indent=4, ensure_ascii=False) + "\n"
@@ -564,7 +564,7 @@ def postprocess_qa_predictions(
 
     # Logging.
     logger.setLevel(logging.INFO if is_world_process_zero else logging.WARN)
-    logger.info(
+    logger.warning(
         f"Post-processing {len(examples)} example predictions split into {len(features)} features."
     )
 
@@ -694,7 +694,7 @@ def gen_postprocessing_function(examples, predictions, training_args, tokenizer)
     output_dir = training_args.output_dir
     assert os.path.isdir(output_dir), f"{output_dir} is not a directory."
     prediction_file = os.path.join(output_dir, "predictions.json")
-    logger.info(f"Saving predictions to {prediction_file}.")
+    logger.warning(f"Saving predictions to {prediction_file}.")
     with open(prediction_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(formatted_predictions, indent=4,

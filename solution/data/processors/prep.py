@@ -55,23 +55,10 @@ def remove_special_token(examples):
 
 
 def get_extractive_features(tokenizer, mode, data_args):
-    """[summary]
-
-    Args:
-        tokenizer ([type]): [description]
-        mode ([type]): [description]
-        data_args ([type]): [description]
-    """
+    """ Get extractive features for train, eval and test. """
 
     def tokenize_fn(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Tokenize examples using hf tokenizer. """
 
         pad_on_right = tokenizer.padding_side == "right"
         max_seq_length = min(data_args.max_seq_length,
@@ -101,14 +88,7 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def get_underline_embedding(tokenized_examples):
-        """[summary]
-
-        Args:
-            tokenized_examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Returns underline embedding when punctuation mode is on. """
 
         underline_ids = np.zeros_like(tokenized_examples['input_ids'])
 
@@ -132,14 +112,7 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_train_features(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get features used for training """
 
         pad_on_right = tokenizer.padding_side == "right"
         # denoising
@@ -230,15 +203,7 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_validation_features(examples, retriever=None):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-            retriever ([type], optional): [description]. Defaults to None.
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get features used for validation  """
 
         pad_on_right = tokenizer.padding_side == "right"
 
@@ -288,23 +253,10 @@ def get_extractive_features(tokenizer, mode, data_args):
 
 
 def get_generative_features(tokenizer, mode, data_args):
-    """[summary]
-
-    Args:
-        tokenizer ([type]): [description]
-        mode ([type]): [description]
-        data_args ([type]): [description]
-    """
+    """ Get generative features for train, eval and test. """
 
     def tokenize_fn(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Tokenize examples using hf tokenizer. """
 
         model_inputs = [f"질문: {q} 지문: {c} </s>"
                         for q, c in zip(examples["question"], examples["context"])]
@@ -318,14 +270,7 @@ def get_generative_features(tokenizer, mode, data_args):
         return output
 
     def tokenize_fn_labels(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get label text using hf tokenizer """
 
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
         with tokenizer.as_target_tokenizer():
@@ -338,14 +283,7 @@ def get_generative_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get features used for train and eval """
 
         tokenized_examples = tokenize_fn(examples)
         labels = tokenize_fn_labels(examples)
@@ -353,14 +291,7 @@ def get_generative_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_test_features(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get features used for test """
 
         tokenized_examples = tokenize_fn(examples)
         return tokenized_examples
@@ -376,23 +307,10 @@ def get_generative_features(tokenizer, mode, data_args):
 
 
 def get_ensemble_features(tokenizer, mode, data_args):
-    """[summary]
-
-    Args:
-        tokenizer ([type]): [description]
-        mode ([type]): [description]
-        data_args ([type]): [description]
-    """
+    """ Get features used for ensemble mode """
 
     def tokenize_fn(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Tokenize examples using hf tokenizer. """
 
         output = tokenizer(
             [f"<s> 질문: {q} 지문: </s>" for q in examples["question"]],
@@ -406,14 +324,7 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return output
 
     def tokenize_fn_labels(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get label text using hf tokenizer """
 
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
         with tokenizer.as_target_tokenizer():
@@ -426,14 +337,7 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get features used for train and eval """
 
         pad_on_right = tokenizer.padding_side == "right"
         tokenized_examples = tokenize_fn(examples)
@@ -495,14 +399,7 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_test_features(examples):
-        """[summary]
-
-        Args:
-            examples ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Get features used for test """
 
         pad_on_right = tokenizer.padding_side == "right"
         tokenized_examples = tokenize_fn(examples)
