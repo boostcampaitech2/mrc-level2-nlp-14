@@ -1,6 +1,5 @@
 import os
 import torch
-import pickle
 import numpy as np
 from numpy import dot
 from numpy.linalg import norm
@@ -10,7 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from .prep import get_extractive_features
 from datasets import load_from_disk, DatasetDict, Dataset
 from tqdm.auto import tqdm
-from sentence_transformers import SentenceTransformer, util
+from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer, AutoModel
 from konlpy.tag import Mecab
 import random
