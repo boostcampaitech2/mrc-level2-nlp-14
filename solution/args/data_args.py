@@ -133,12 +133,16 @@ class RetrievalArguments(HighlightingArguments):
     retrieval_mode: str = field(
         default="sparse",
         metadata={
-            "help": "Decide which retrieval mode to call (e.g., dense, sparse, elastic search)."
+            "help": "Decide which retrieval mode to call.",
+            "choices": ["sparse", "dense", "elastic_engine"],
         }
     )
     retrieval_name: str = field(
         default="tfidf",
-        metadata={"help": "Decide which retrieval class to call."}
+        metadata={
+            "help": "Decide which retrieval class to call.",
+            "choices": ["tfidf", "okapi_bm25", "dpr", "colbert", "elastic_search"],
+        }
     )
     rebuilt_index: bool = field(
         default=False,
