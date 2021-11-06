@@ -18,27 +18,8 @@ class TfidfRetrieval(SparseRetrieval):
         self.enable_batch = True
 
     def vectorize(self, contexts):
-        """[summary]
-
-        Args:
-            contexts ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-
         p_embeddings = self.vectorizer.fit_transform(contexts)
         return p_embeddings
 
     def calculate_scores(self, q_embeddings, p_embeddings):
-        """[summary]
-
-        Args:
-            q_embeddings ([type]): [description]
-            p_embeddings ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-
         return q_embeddings * p_embeddings.T
