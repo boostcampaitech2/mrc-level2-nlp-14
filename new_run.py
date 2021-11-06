@@ -116,11 +116,11 @@ def main():
         reader._trainer._load_state_dict_in_model(state_dict)
         del state_dict
         torch.cuda.empty_cache()
-        checkpoint = None
 
     if training_args.do_train:
         with reader.mode_change(mode="train"):
-            train_results = reader.read(resume_from_checkpoint=checkpoint)
+            train_results = reader.read(
+                resume_from_checkpoint=None if data_args.curriculum_learn else checkpoint)
             reader.save_trainer()
             reader.save_metrics("train", 
                                 train_results.metrics, 
