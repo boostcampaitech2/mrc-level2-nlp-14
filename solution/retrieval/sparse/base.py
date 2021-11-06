@@ -42,17 +42,42 @@ class SparseRetrieval(RetrievalBase):
 
     @vectorizer.setter
     def vectorizer(self, val):
+        """[summary]
+
+        Args:
+            val ([type]): [description]
+        """
+
         self._vectorizer = val
 
     @abc.abstractmethod
     def vectorize(self, contexts):
+        """[summary]
+
+        Args:
+            contexts ([type]): [description]
+        """
+
         pass
 
     @abc.abstractmethod
     def calculate_scores(self, query_embedding, passage_embedding):
+        """[summary]
+
+        Args:
+            query_embedding ([type]): [description]
+            passage_embedding ([type]): [description]
+        """
+
         pass
 
     def set_tokenizer(self) -> Tokenizer:
+        """[summary]
+
+        Returns:
+            Tokenizer: [description]
+        """
+
         if self.tokenizer_name == "mecab":
             tokenizer = Mecab()
         elif self.tokenizer_name == "kkma":
@@ -84,11 +109,31 @@ class SparseRetrieval(RetrievalBase):
         use_faiss: bool = False,
         **kwargs,
     ) -> Tuple[List, List]:
+        """[summary]
+
+        Args:
+            query_or_dataset (Union[str, Dataset]): [description]
+            topk (int): [description]
+            use_faiss (bool, optional): [description]. Defaults to False.
+
+        Returns:
+            Tuple[List, List]: [description]
+        """
+
         return super().get_relevant_doc(query_or_dataset,
                                         topk, use_faiss, **kwargs)
 
     @timer(dataset=False)
     def get_query_embedding(self, query_or_dataset: Union[str, Dataset]) -> csr_matrix:
+        """[summary]
+
+        Args:
+            query_or_dataset (Union[str, Dataset]): [description]
+
+        Returns:
+            csr_matrix: [description]
+        """
+
         if isinstance(query_or_dataset, Dataset):
             query = query_or_dataset["question"]
         else:
@@ -98,6 +143,12 @@ class SparseRetrieval(RetrievalBase):
         return query_emb
 
     def get_passage_embedding(self):
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+
         cls_name = self.__class__.__name__
         pickle_name = f"{cls_name}_embedding.bin"
         vectorizer_path = f"{cls_name}_vectorizer.bin"
@@ -147,16 +198,16 @@ class SparseRetrieval(RetrievalBase):
         return doc_scores, doc_indices
 
     def get_topk_documents_with_faiss(self, query_embs, topk):
-        """
-        Get top-k similarity among query and documents with faiss
+        """Get top-k similarity among query and documents with faiss
 
-        Arguments:
+        Args:
             query_emb (Union[csr_matrix, np.ndarray]):
+
         Returns:
             document score (List):
-                입력 query에 대한 topk document 유사도
+                topk document's similarity for input query
             document indices (List):
-                입력 query에 대한 topk document 인덱스
+                topk document's indices for input query
         """
         query_embs = query_embs.toarray().astype(np.float32)
         doc_scores, doc_indices = self.indexer.search(query_embs, topk)
