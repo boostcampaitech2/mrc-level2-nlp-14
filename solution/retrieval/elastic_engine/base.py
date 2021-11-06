@@ -10,6 +10,13 @@ from ..core import SearchBase
 class ElasticSearchBase(SearchBase):
 
     def __init__(self, args: MrcDataArguments, es: Elasticsearch):
+        """[summary]
+
+        Args:
+            args (MrcDataArguments): [description]
+            es (Elasticsearch): [description]
+        """
+
         super().__init__(args)
         self.engine = es
         self._index_config = None
@@ -25,6 +32,12 @@ class ElasticSearchBase(SearchBase):
         assert self.engine.ping(), "Fail ping."
 
     def build_index(self, index_name: str):
+        """[summary]
+
+        Args:
+            index_name (str): [description]
+        """
+
         assert not self.is_exists_index()
         t0 = time.time()
         print(f"Create elasticsearch index: {index_name}")
@@ -43,6 +56,12 @@ class ElasticSearchBase(SearchBase):
         print(f"Done {time.time() - t0:.3}")
 
     def delete(self, index_name: str):
+        """[summary]
+
+        Args:
+            index_name (str): [description]
+        """
+
         print(f"Delete elasticsearch index: {index_name}")
         self.engine.indices.delete(index=index_name, ignore=["400", "404"])
 
@@ -52,6 +71,12 @@ class ElasticSearchBase(SearchBase):
 
     @index_name.setter
     def index_name(self, index_name: str):
+        """[summary]
+
+        Args:
+            index_name (str): [description]
+        """
+
         self.args.index_name = index_name
 
     @property
@@ -68,6 +93,12 @@ class ElasticSearchBase(SearchBase):
 
     @index_config.setter
     def index_config(self, val):
+        """[summary]
+
+        Args:
+            val ([type]): [description]
+        """
+
         self._index_config = val
 
     def build_index_config(self):
@@ -77,6 +108,15 @@ class ElasticSearchBase(SearchBase):
         return index_config
 
     def update_settings(self, index_config):
+        """[summary]
+
+        Args:
+            index_config ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         _analyzer = {
             "my_analyzer": {
                 "type": "custom",
@@ -162,6 +202,15 @@ class ElasticSearchBase(SearchBase):
         return index_config
 
     def update_mappings(self, index_config):
+        """[summary]
+
+        Args:
+            index_config ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         index_config["mappings"] = {
             # https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic.html
             "dynamic": "strict",  # 새 필드가 감지되면 예외가 발생하고 문서가 거부됨.
