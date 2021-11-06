@@ -106,6 +106,15 @@ class OutputMixin:
         return datasets
     
     def process_topk_context(self, contexts):
+        """
+        Process retrieved topk wiki context
+
+        Args:
+            contexts (List[str]): list of wiki contexts
+
+        Returns:
+            str: joined wiki context
+        """
         # self.args에 들어오는 option으로 top-k 처리
         contexts = "#".join(contexts)
         contexts = contexts.split('#')
