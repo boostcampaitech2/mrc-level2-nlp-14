@@ -53,7 +53,7 @@ def main():
 
     if data_args.make_mask:
         make_emb_dataset(data_args.dataset_path,data_args.masking_type, data_args.dataset_path)
-        return
+    
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_path}")
 
