@@ -23,6 +23,23 @@ def convert_examples_to_features(
     topk: Optional[int] = 1,
     mode: str = "train",
 ):
+    """[summary]
+
+    Args:
+        processor (DataProcessor): [description]
+        tokenizer (PreTrainedTokenizer): [description]
+        retriever (Optional[SearchBase], optional): [description]. Defaults to None.
+        topk (Optional[int], optional): [description]. Defaults to 1.
+        mode (str, optional): [description]. Defaults to "train".
+
+    Raises:
+        AttributeError: [description]
+        NotImplemented: [description]
+
+    Returns:
+        [type]: [description]
+    """
+
     if mode == "test" and retriever is None:
         raise AttributeError
 
@@ -67,7 +84,19 @@ def convert_examples_to_features(
 
 
 class OdqaProcessor(DataProcessor):
+    """[summary]
+
+    Args:
+        DataProcessor ([type]): [description]
+    """
+
     def get_train_examples(self):
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+
         dataset_path = self.data_args.dataset_path
 
         if self.data_args.curriculum_learn:
@@ -79,12 +108,24 @@ class OdqaProcessor(DataProcessor):
         return input_data
 
     def get_eval_examples(self):
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+
         dataset_path = self.data_args.dataset_path
         input_data = load_from_disk(os.path.join(
             dataset_path, "train_dataset"))["validation"]
         return input_data
 
     def get_test_examples(self):
+        """[summary]
+
+        Returns:
+            [type]: [description]
+        """
+
         dataset_path = self.data_args.dataset_path
         input_data = load_from_disk(os.path.join(
             dataset_path, "test_dataset"))["validation"]
