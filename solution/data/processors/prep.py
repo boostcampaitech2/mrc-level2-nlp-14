@@ -13,8 +13,7 @@ DENOISE_FUNC = {
 
 
 def remove_special_token(examples):
-    """
-    Remove special tokens in data v3
+    """Remove special tokens in data v3
 
     Args:
         examples (Dict[Any]): DatasetDict
@@ -56,8 +55,24 @@ def remove_special_token(examples):
 
 
 def get_extractive_features(tokenizer, mode, data_args):
+    """[summary]
+
+    Args:
+        tokenizer ([type]): [description]
+        mode ([type]): [description]
+        data_args ([type]): [description]
+    """
 
     def tokenize_fn(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         pad_on_right = tokenizer.padding_side == "right"
         max_seq_length = min(data_args.max_seq_length,
                              tokenizer.model_max_length)
@@ -86,6 +101,14 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def get_underline_embedding(tokenized_examples):
+        """[summary]
+
+        Args:
+            tokenized_examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
 
         underline_ids = np.zeros_like(tokenized_examples['input_ids'])
 
@@ -109,6 +132,15 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_train_features(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         pad_on_right = tokenizer.padding_side == "right"
         # denoising
         if 'v3' in data_args.dataset_version:
@@ -198,6 +230,16 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_validation_features(examples, retriever=None):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+            retriever ([type], optional): [description]. Defaults to None.
+
+        Returns:
+            [type]: [description]
+        """
+
         pad_on_right = tokenizer.padding_side == "right"
 
         # odqa.py 에서 v3 설명 참조. dataset version이 v3.*.*이고 retrieval 하지 않을 때 실행
@@ -246,8 +288,24 @@ def get_extractive_features(tokenizer, mode, data_args):
 
 
 def get_generative_features(tokenizer, mode, data_args):
+    """[summary]
+
+    Args:
+        tokenizer ([type]): [description]
+        mode ([type]): [description]
+        data_args ([type]): [description]
+    """
 
     def tokenize_fn(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         model_inputs = [f"질문: {q} 지문: {c} </s>"
                         for q, c in zip(examples["question"], examples["context"])]
         output = tokenizer(
@@ -260,6 +318,15 @@ def get_generative_features(tokenizer, mode, data_args):
         return output
 
     def tokenize_fn_labels(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
         with tokenizer.as_target_tokenizer():
             labels = tokenizer(
@@ -271,12 +338,30 @@ def get_generative_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         tokenized_examples = tokenize_fn(examples)
         labels = tokenize_fn_labels(examples)
         tokenized_examples.update({"labels": labels})
         return tokenized_examples
 
     def prepare_test_features(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         tokenized_examples = tokenize_fn(examples)
         return tokenized_examples
 
@@ -291,8 +376,24 @@ def get_generative_features(tokenizer, mode, data_args):
 
 
 def get_ensemble_features(tokenizer, mode, data_args):
+    """[summary]
+
+    Args:
+        tokenizer ([type]): [description]
+        mode ([type]): [description]
+        data_args ([type]): [description]
+    """
 
     def tokenize_fn(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         output = tokenizer(
             [f"<s> 질문: {q} 지문: </s>" for q in examples["question"]],
             [f"{c} </s>" for c in examples["context"]],
@@ -305,6 +406,15 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return output
 
     def tokenize_fn_labels(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
         with tokenizer.as_target_tokenizer():
             labels = tokenizer(
@@ -316,6 +426,15 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         pad_on_right = tokenizer.padding_side == "right"
         tokenized_examples = tokenize_fn(examples)
         labels = tokenize_fn_labels(examples)
@@ -376,6 +495,15 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_test_features(examples):
+        """[summary]
+
+        Args:
+            examples ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+
         pad_on_right = tokenizer.padding_side == "right"
         tokenized_examples = tokenize_fn(examples)
         tokenized_examples["example_id"] = []
