@@ -4,11 +4,6 @@ from dataclasses import dataclass, field
 from .base import ProjectArguments
 
 
-"""
-PROJECT ARGS에 ANALYZER에 대한 세팅을 추가해야 한다.
-"""
-
-
 @dataclass
 class AnalyzerArguments(ProjectArguments):
     wandb_project: str = field(
@@ -21,5 +16,5 @@ class AnalyzerArguments(ProjectArguments):
 class MrcProjectArguments(AnalyzerArguments):
     checkpoint: str = field(
         default=None,
-        metadata={"help": ""}
+        metadata={"help": "checkpoint directory path"}
     )
