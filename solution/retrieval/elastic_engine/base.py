@@ -1,5 +1,6 @@
 import time
 import json
+from typing import Any
 from datasets import Dataset
 from elasticsearch import Elasticsearch, helpers
 
@@ -10,13 +11,6 @@ from ..core import SearchBase
 class ElasticSearchBase(SearchBase):
 
     def __init__(self, args: MrcDataArguments, es: Elasticsearch):
-        """[summary]
-
-        Args:
-            args (MrcDataArguments): [description]
-            es (Elasticsearch): [description]
-        """
-
         super().__init__(args)
         self.engine = es
         self._index_config = None
@@ -32,11 +26,7 @@ class ElasticSearchBase(SearchBase):
         assert self.engine.ping(), "Fail ping."
 
     def build_index(self, index_name: str):
-        """[summary]
-
-        Args:
-            index_name (str): [description]
-        """
+        """ Build elastic search index using bulk api """
 
         assert not self.is_exists_index()
         t0 = time.time()
@@ -56,66 +46,51 @@ class ElasticSearchBase(SearchBase):
         print(f"Done {time.time() - t0:.3}")
 
     def delete(self, index_name: str):
-        """[summary]
-
-        Args:
-            index_name (str): [description]
-        """
+        """ Delete elastic search index """
 
         print(f"Delete elasticsearch index: {index_name}")
         self.engine.indices.delete(index=index_name, ignore=["400", "404"])
 
     @property
-    def index_name(self):
+    def index_name(self) -> str:
+        """ Get index name from arguments"""
         return self.args.index_name
 
     @index_name.setter
     def index_name(self, index_name: str):
-        """[summary]
-
-        Args:
-            index_name (str): [description]
-        """
-
+        """ Set index name to arguments"""
         self.args.index_name = index_name
 
     @property
-    def indices(self):
+    def indices(self) -> Any:
+        """ Get current index from elastic search engine """
         return self.engine.indices
 
-    def is_exists_index(self):
+    def is_exists_index(self) -> bool:
+        """ Returns whether the index already exists """
         return self.engine.indices.exists(index=self.index_name)
 
     @property
     def index_config(self):
+        """ Get index configuration """
         # 엘라스틱 서치에서 받아오는 메서드 존재함.
         return self._index_config
 
     @index_config.setter
     def index_config(self, val):
-        """[summary]
-
-        Args:
-            val ([type]): [description]
-        """
+        """ Set index configuration """
 
         self._index_config = val
 
     def build_index_config(self):
+        """ Build index configuration using data arguments """
         index_config = {"settings": {}, "mappings": {}}
         index_config = self.update_settings(index_config)
         index_config = self.update_mappings(index_config)
         return index_config
 
     def update_settings(self, index_config):
-        """[summary]
-
-        Args:
-            index_config ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Update index config's `settings` contents using DataArguments """
 
         _analyzer = {
             "my_analyzer": {
@@ -202,14 +177,7 @@ class ElasticSearchBase(SearchBase):
         return index_config
 
     def update_mappings(self, index_config):
-        """[summary]
-
-        Args:
-            index_config ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
+        """ Update index config's `mappings` contents using DataArguments """
 
         index_config["mappings"] = {
             # https://www.elastic.co/guide/en/elasticsearch/reference/current/dynamic.html
