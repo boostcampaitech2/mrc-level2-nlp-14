@@ -3,7 +3,10 @@ from .sparse import (
     TfidfRetrieval,
     OkapiBM25Retrieval,
 )
-# from .dense import *
+from .dense import (
+    DensePassageRetrieval,
+    ColBERTRetrieval,
+)
 from .elastic_engine import ESRetrieval
 
 
@@ -17,8 +20,8 @@ SPARSE_RETRIEVAL = {
     "okapi_bm25": OkapiBM25Retrieval,
 }
 DENSE_RETRIEVAL = {
-    "dpr": None,
-    "colbert": None,
+    "dpr": DensePassageRetrieval,
+    "colbert": ColBERTRetrieval,
 }
 ELASTIC_ENGINE = {
     "elastic_search": ESRetrieval,
