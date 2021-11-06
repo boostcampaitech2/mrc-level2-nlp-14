@@ -33,6 +33,13 @@ class QuestionAnsweringTrainer(BaseTrainer):
         post_process_function: Callable = None,
         **kwargs
     ):
+        """[summary]
+
+        Args:
+            eval_examples (datasets.Dataset, optional): [description]. Defaults to None.
+            post_process_function (Callable, optional): [description]. Defaults to None.
+        """
+
         super().__init__(*args, **kwargs)
         self.eval_examples = eval_examples
         self.post_process_function = post_process_function
@@ -45,6 +52,19 @@ class QuestionAnsweringTrainer(BaseTrainer):
         metric_key_prefix: str = "eval",
         mode: str = "evaluate",
     ) -> Dict[str, float]:
+        """[summary]
+
+        Args:
+            eval_dataset (Optional[datasets.Dataset], optional): [description]. Defaults to None.
+            eval_examples (Optional[datasets.Dataset], optional): [description]. Defaults to None.
+            ignore_keys (Optional[List[str]], optional): [description]. Defaults to None.
+            metric_key_prefix (str, optional): [description]. Defaults to "eval".
+            mode (str, optional): [description]. Defaults to "evaluate".
+
+        Returns:
+            Dict[str, float]: [description]
+        """
+
         # memory metrics - must set up as early as possible
         self._memory_tracker.start()
         eval_dataset = self.eval_dataset if eval_dataset is None else eval_dataset
@@ -124,6 +144,19 @@ class QuestionAnsweringTrainer(BaseTrainer):
         metric_key_prefix: str = "test",
         mode: str = "predict",
     ) -> PredictionOutput:
+        """[summary]
+
+        Args:
+            test_dataset (datasets.Dataset): [description]
+            test_examples (datasets.Dataset): [description]
+            ignore_keys (Optional[List[str]], optional): [description]. Defaults to None.
+            metric_key_prefix (str, optional): [description]. Defaults to "test".
+            mode (str, optional): [description]. Defaults to "predict".
+
+        Returns:
+            PredictionOutput: [description]
+        """
+
         if mode.lower in ["test", "pred", "predict"]:
             mode = "predict"
         assert mode == "predict"
