@@ -15,8 +15,7 @@ from solution.utils.constant import (
 class FaissMixin:
 
     def build_faiss(self, data_path: str, num_clusters: int = 64):
-        """
-        Summary:
+        """ Summary:
             속성으로 저장되어 있는 Passage Embedding을
             Faiss indexer에 fitting 시켜놓습니다.
             이렇게 저장된 indexer는 `get_relevant_doc`에서 유사도를 계산하는데 사용됩니다.
@@ -26,7 +25,12 @@ class FaissMixin:
             그렇기 때문에 build된 index 파일을 저정하고 다음에 사용할 때 불러옵니다.
             다만 이 index 파일은 용량이 1.4Gb+ 이기 때문에 여러 num_clusters로 시험해보고
             제일 적절한 것을 제외하고 모두 삭제하는 것을 권장합니다.
+
+        Args:
+            data_path (str): [description]
+            num_clusters (int, optional): [description]. Defaults to 64.
         """
+
         indexer_name = f"faiss_clusters{num_clusters}.index"
         indexer_path = os.path.join(data_path, indexer_name)
         if os.path.isfile(indexer_path):
@@ -58,9 +62,18 @@ class OutputMixin:
         doc_indices,
         doc_contexts=None,
     ) -> pd.DataFrame:
+        """Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
+
+        Args:
+            query_or_dataset ([type]): [description]
+            doc_scores ([type]): [description]
+            doc_indices ([type]): [description]
+            doc_contexts ([type], optional): [description]. Defaults to None.
+
+        Returns:
+            pd.DataFrame: [description]
         """
-        Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
-        """
+
         # Need to modifiy the arguement
         if self.args.do_punctuation == False:
             device = torch.device(
@@ -116,6 +129,16 @@ class OutputMixin:
         df: pd.DataFrame,
         eval_mode: bool = True,
     ) -> DatasetDict:
+        """[summary]
+
+        Args:
+            df (pd.DataFrame): [description]
+            eval_mode (bool, optional): [description]. Defaults to True.
+
+        Returns:
+            DatasetDict: [description]
+        """
+
         features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
         datasets = DatasetDict(
             {"validation": Dataset.from_pandas(df, features=features)}
@@ -127,6 +150,16 @@ class OutputMixin:
         df: pd.DataFrame,
         eval_mode: bool = True,
     ) -> Dataset:
+        """[summary]
+
+        Args:
+            df (pd.DataFrame): [description]
+            eval_mode (bool, optional): [description]. Defaults to True.
+
+        Returns:
+            Dataset: [description]
+        """
+
         features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
         datasets = Dataset.from_pandas(df, features=features)
         return datasets
