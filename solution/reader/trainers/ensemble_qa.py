@@ -35,6 +35,13 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
         post_process_function: Callable = None,
         **kwargs
     ):
+        """[summary]
+
+        Args:
+            eval_examples (datasets.Dataset, optional): [description]. Defaults to None.
+            post_process_function (Callable, optional): [description]. Defaults to None.
+        """
+
         super().__init__(*args, eval_examples=eval_examples,
                          post_process_function=post_process_function, **kwargs)
         self.label_names = ["start_positions", "end_positions", "labels"]
@@ -46,6 +53,17 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """[summary]
+
+        Args:
+            model (nn.Module): [description]
+            inputs (Dict[str, Union[torch.Tensor, Any]]): [description]
+            prediction_loss_only (bool): [description]
+            ignore_keys (Optional[List[str]], optional): [description]. Defaults to None.
+
+        Returns:
+            Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]: [description]
+        """
 
         if not self.args.predict_with_generate or prediction_loss_only:
             return super().prediction_step(
