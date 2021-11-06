@@ -10,11 +10,12 @@ from solution.args import (
     MrcTrainingArguments,
     MrcProjectArguments,
 )
+from solution.data import DATA_COLLATOR
 from solution.data.metrics import compute_metrics
 from solution.data.processors import (
     OdqaProcessor,
     convert_examples_to_features,
-    post_processing_function,
+    POST_PROCESSING_FUNCTION,
 )
 from solution.reader import READER_HOST
 from solution.retrieval import RETRIEVAL_HOST
@@ -23,7 +24,7 @@ from solution.utils import set_seed, check_no_error
 from transformers import AutoTokenizer
 from transformers.utils import logging
 
-from solution.data.processors.mask import make_emb_dataset
+from solution.data.processors.mask import get_emb_mask_dataset
 
 logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
@@ -51,9 +52,7 @@ def main():
 
     set_seed(training_args.seed)
 
-    if data_args.make_mask:
-        make_emb_dataset(data_args.dataset_path,data_args.masking_type, data_args.dataset_path)
-        return
+    
     print(f"model is from {model_args.model_name_or_path}")
     print(f"data is from {data_args.dataset_path}")
 
@@ -79,9 +78,32 @@ def main():
 
     train_features, train_datasets = convert_examples_to_features(processor, tokenizer)
 
+    # Get Masked Input features
+    if data_args.make_mask:
+        train_features = get_emb_mask_dataset(
+            data_args.dataset_path,
+            data_args.masking_type,
+            data_args.dataset_path
+        )
+    
     eval_features, eval_datasets = convert_examples_to_features(
         processor, tokenizer, mode="eval")
     
+    data_callator_cls = DATA_COLLATOR[model_args.reader_type]
+    if model_args.reader_type in ["generative", "ensemble"]:
+        data_collator = data_callator_cls(
+            tokenizer=tokenizer,
+            label_pad_token_id=tokenizer.pad_token_id,
+            pad_to_multiple_of=8 if training_args.fp16 else None,
+        )
+    else:
+        data_collator = data_callator_cls(
+            tokenizer=tokenizer,
+            pad_to_multiple_of=8 if training_args.fp16 else None,
+        )
+
+    post_processing_func = POST_PROCESSING_FUNCTION[model_args.reader_type]
+
     reader.set_trainer(
         model_init=reader.model_init,
         args=training_args,
@@ -90,7 +112,8 @@ def main():
         eval_examples=eval_datasets,
         compute_metrics=compute_metrics,
         tokenizer=tokenizer,
-        post_process_function=post_processing_function,
+        data_collator=data_collator,
+        post_process_function=post_processing_func,
     )
 
     last_checkpoint, data_args.max_seq_length = check_no_error(
@@ -107,7 +130,6 @@ def main():
             checkpoint = model_args.model_name_or_path
     logger.warning(f"CHECKPOINT: {checkpoint}")
 
-
     # curriculum learning setting
     if data_args.curriculum_learn:
         logger.warning(f"load from checkpoint {checkpoint}")
@@ -116,11 +138,11 @@ def main():
         reader._trainer._load_state_dict_in_model(state_dict)
         del state_dict
         torch.cuda.empty_cache()
-        checkpoint = None
 
     if training_args.do_train:
         with reader.mode_change(mode="train"):
-            train_results = reader.read(resume_from_checkpoint=checkpoint)
+            train_results = reader.read(
+                resume_from_checkpoint=None if data_args.curriculum_learn else checkpoint)
             reader.save_trainer()
             reader.save_metrics("train", 
                                 train_results.metrics, 

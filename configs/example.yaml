@@ -87,7 +87,7 @@ TrainingArguments:
   learning_rate: 2e-6
   do_train: True
   do_eval: True
-  do_predict: True # eval_retrieval = True 필수
+  do_predict: True # when True, must set eval_retrieval = True
   evaluation_strategy: steps
   save_strategy: steps
   per_device_train_batch_size: 16

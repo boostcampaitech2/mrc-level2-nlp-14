@@ -53,6 +53,7 @@ def convert_examples_to_features(
         load_from_cache_file=not processor.data_args.overwrite_cache,
     )
 
+    # v3: train context에 #, [ANSWER] 등 special token이 포함되어 있는 v3.*.* 버전의 데이터
     if ('v3' in processor.data_args.dataset_version) & (retriever is None) & (mode != "test"):
         dataset = dataset.map(
             remove_special_token,
@@ -76,7 +77,7 @@ class OdqaProcessor(DataProcessor):
 
     def get_eval_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset_aug2"))["validation"]
+        input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))["validation"]
         return input_data
 
     def get_test_examples(self):

@@ -3,6 +3,17 @@ import math
 import re
 
 def permute_sentences(examples, data_args, p=1.0):
+    """
+    Permutate sentences
+
+    Args:
+        examples (Dict[Any]): DatasetDict
+        data_args (DataArguments): data arguments
+        p (float, optional): Permutation ratio. Defaults to 1.0.
+
+    Returns:
+        Dict[Any]: DatasetDict
+    """
     p = data_args.permute_sentence_ratio
 
     answers = []
@@ -13,7 +24,7 @@ def permute_sentences(examples, data_args, p=1.0):
     title = []
     no_batch = type(examples['context']) == str
 
-    # 입력이 배치 단위가 아닌 경우
+    # no batch
     if no_batch == True:
         sentence_list = examples['context'].split('#')
         result = sentence_list.copy()
@@ -38,7 +49,7 @@ def permute_sentences(examples, data_args, p=1.0):
             'question': examples['question'],
             'title': examples['title']}
     
-    # 입력이 배치 단위인 경우
+    # batch
     else:
         for i in range(len(examples['context'])):    
             sentence_list = examples['context'][i].split('#')

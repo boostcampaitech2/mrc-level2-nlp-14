@@ -49,6 +49,7 @@ class DataPathArguments(DataArguments):
         default="./data/aistage-mrc/train_dataset", 
         metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
     )
+   
     
 @dataclass
 class TokenizerArguments(DataPathArguments):
@@ -59,6 +60,14 @@ class TokenizerArguments(DataPathArguments):
             "than this will be truncated, sequences shorter will be padded."
         },
     )
+
+    max_label_length: int = field(
+        default= 128,
+        metadata = {
+             "help": "The maximum label length after tokenization. Sequences longer "
+        }
+    )
+
     pad_to_max_length: bool = field(
         default=False,
         metadata={
@@ -95,6 +104,10 @@ class RetrievalArguments(TokenizerArguments):
     )
     retrieval_tokenizer_name: str = field(
         default="mecab",
+        metadata={"help": ""}
+    )
+    retrieval_model_path: str = field(
+        default="./dense_retrieval",
         metadata={"help": ""}
     )
     sp_max_features: int = field(

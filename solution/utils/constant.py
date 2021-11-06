@@ -6,6 +6,9 @@ QUESTION_COLUMN_NAME = "question"
 CONTEXT_COLUMN_NAME = "context"
 ANSWER_COLUMN_NAME = "answers"
 
+Q_ENCODER_NAME = "q_encoder"
+P_ENCODER_NAME = "p_encoder"
+COLBERT_NAME = "colbert"
 
 MRC_EVAL_FEATURES = Features(
     {
