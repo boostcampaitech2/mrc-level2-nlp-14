@@ -9,6 +9,8 @@ wandb/
 best_model/
 outputs/
 data/aistage-mrc/
+data/*/aistage-mrc/
+
 *.ipynb
 *.arrow
 *.yaml
