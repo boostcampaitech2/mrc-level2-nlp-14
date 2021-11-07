@@ -167,12 +167,13 @@ retrieve.retrieve("윤락행위등방지법이 전문 개정되었던 해는?")
 - [faiss](https://github.com/facebookresearch/faiss)
 - [koreyou/bm25](https://gist.github.com/koreyou/f3a8a0470d32aa56b32f198f49a9f2b8)
 
-#### Pre-post processing
+#### Pre & Post processing
 - [hyunwoongko/kss](https://github.com/hyunwoongko/kss)
 - [konlpy](https://github.com/konlpy/konlpy)
 - [khaiii](https://github.com/kakao/khaiii)
 - [nltk](https://github.com/nltk/nltk)
 - [sentence_transformers](https://github.com/UKPLab/sentence-transformers)
+- [KoEDA](https://github.com/toriving/KoEDA)
 
 #### ETC
 - [mkorpela/overrides](https://github.com/mkorpela/overrides)
