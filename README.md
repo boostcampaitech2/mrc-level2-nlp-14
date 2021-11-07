@@ -159,13 +159,13 @@ retrieve.retrieve("윤락행위등방지법이 전문 개정되었던 해는?")
 - [huggingface/datasets](https://github.com/huggingface/datasets)
 - [huggingface/transformers](https://github.com/huggingface/transformers)
 - [kakaobrain/pororo](https://github.com/kakaobrain/pororo)
-- [stranford-futuredata/ColBERT]( https://github.com/stanford-futuredata/ColBERT/tree/master/colbert)
 
 #### Retrieval
 - [dorianbrown/rank_bm25](https://github.com/dorianbrown/rank_bm25)
 - [elastricsearch](https://github.com/elastic/elasticsearch-py)
 - [faiss](https://github.com/facebookresearch/faiss)
 - [koreyou/bm25](https://gist.github.com/koreyou/f3a8a0470d32aa56b32f198f49a9f2b8)
+- [stranford-futuredata/ColBERT]( https://github.com/stanford-futuredata/ColBERT/tree/master/colbert)
 
 #### Pre & Post processing
 - [hyunwoongko/kss](https://github.com/hyunwoongko/kss)
