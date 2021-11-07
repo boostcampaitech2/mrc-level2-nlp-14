@@ -12,7 +12,7 @@
 
 ### Team KiYOUNG2
 
-"Korean is all YOU Need for dialoGuE"
+_"Korean is all YOU Need for dialoGuE"_
 
 #### 🔅 Members  
 
@@ -31,15 +31,51 @@
 - [`김채은`](https://github.com/Amber-Chaeeunk) &nbsp; Generative model • Extractive & Generative Ensemble • Underline Embedding Layer • Pivot Tanslation • Code • Data versioning • Context Summary
 - [`유영재`](https://github.com/uyeongjae) &nbsp; Data versioning • Elastic search • Retrieval experiment • Data Augmentation • Post processing • Ensemble(hard & soft voting)
 
-## Project Outline
+## 2. Project Outline
+![mrc_logo](https://user-images.githubusercontent.com/37775784/140635905-748921a4-6b20-4cca-b3e4-24d894acfd6c.PNG)
+
+**"서울의 GDP는 세계 몇 위야?", "MRC가 뭐야?"**
+
+우리는 궁금한 것들이 생겼을 때, 아주 당연하게 검색엔진을 활용하여 검색을 합니다. 이런 검색엔진은 최근 MRC (기계독해) 기술을 활용하며 매일 발전하고 있는데요. 본 대회에서는 우리가 당연하게 활용하던 검색엔진, 그것과 유사한 형태의 시스템을 만들어 볼 것입니다.
+
+**Question Answering (QA)은 다양한 종류의 질문에 대해 대답하는 인공지능**을 만드는 연구 분야입니다.다양한 QA 시스템 중, **Open-Domain Question Answering (ODQA) 은 주어지는 지문이 따로 존재하지 않고 사전에 구축되어있는 Knowledge resource 에서 질문에 대답할 수 있는 문서를 찾는** 과정이 추가되기 때문에 더 어려운 문제입니다.
+
+![odqa](https://user-images.githubusercontent.com/37775784/140635909-5508e825-472e-42cc-8c1c-69e0b4815c30.PNG)
+
+**본 ODQA 대회에서 우리가 만들 모델은 two-stage**로 구성되어 있습니다. **첫 단계는 질문에 관련된 문서를 찾아주는 "retriever"** 단계이고, **다음으로는 관련된 문서를 읽고 적절한 답변을 찾거나 만들어주는 "reader"** 단계입니다. 두 가지 단계를 각각 구성하고 그것들을 적절히 통합하게 되면, 어려운 질문을 던져도 답변을 해주는 ODQA 시스템을 여러분들 손으로 직접 만들어보게 됩니다.
+
+따라서, 대회는 더 정확한 답변을 내주는 모델을 만드는 팀이 좋은 성적을 거두게 됩니다.
+
+![mrc_fig](https://user-images.githubusercontent.com/37775784/140635959-cf5951f3-3cb1-4e4b-94ed-0f6e7bed1996.png)
+
+### 🏆 Final Score
+
+![lb](https://user-images.githubusercontent.com/37775784/140636123-c6c8779b-d5b3-4bb8-955b-7f9c3ef44a5a.PNG)
+
+## 3. Solution
+
+기계 학습은 인간의 학습 방식에서 아이디어를 얻었습니다. 때문에 저희도 이번 ODQA 문제를 푸는 방향을 **사람과 같이 학습하는 모델 구축** 으로 잡았습니다. 사람과 같이 학습한다는 것을 정의하기 위해 저희는 아래와 같은 방안을 제시했습니다.
+- 우리는 중요할 것이라 생각되는 부분에 밑줄을 긋는다 (Underlining)
+- 초-중-고의 순으로 국가에서 정한 커리큘럼을 이수한다 (Curriculum Learning)
+- 사람마다 학습을 위해 참고하는 자료가 다르다 (Data Augmentation)
+
+실제로 초기 예측 구조를 구축한 다음 검증 데이터 세트에서 틀린 예제들을 분석한 결과, 저희는 아래와 같은 견해를 얻었습니다.
+- Reader 문제] 날짜 문제를 잘 못 풀더라! → PORORO 모델의 기학습 가중치 활용 (날짜를 상대적으로 잘 맞춤)
+- Reader 문제] 뒤에 조사가 붙은 채로 나오는 결과가 많더라! → 형태소 분석기 앙상블 활용
+- Reader 문제] 복잡한 의미 관계 추론을 힘들어 하더라! → 다양한 데이터로 다양한 모델에 태워서 앙상블
+- Retrieval 문제] 이상한 문서를 가져오더라! → Query 앙상블 + Title을 Context로 붙이기
+
+저희는 위에서 얻은 견해를 기반으로 저희만의 solution을 4주 동안 개발하였으며 상세한 내용을 아래 발표 자료에 정리하였습니다.
+
+- [1등 솔루션 발표 pdf](./assets/kiyoung2_odqa.pdf)
+
+다양한 데이터 세트와 모델을 활용하고 학습 방식에도 curriculum learning 등을 통해 학습시킨 후에 앙상블을 했을 때 성능이 많이 올랐습니다.
 
 
-## Solution
-
-
-## How to Use
+## 4. How to Use
 ```
 .
+├── assets/kiyoung2_odqa.pdf
 ├── configs/examples.yaml
 ├── solution
 │   ├── args/base.py
@@ -67,11 +103,43 @@
 │   │     ├── sparse/base.py
 │   │     ├── /core.py
 │   │     └── /mixin.py
-│   ├── utils
-│
+│   └── utils
 ├── .gitignore
 ├── README.md
-├── new_run.py
+└── new_run.py
 ```
 
-## References
+아래 명령어로 실행 가능합니다.
+
+```console
+python new_run.py configs/examples.yaml
+```
+
+아래와 같이 모듈을 호출하여 사용할 수도 있습니다.
+```python
+import os
+from solution.args import HfArgumentParser
+from solution.args import (
+    MrcDataArguments,
+    MrcModelArguments,
+    MrcTrainingArguments,
+    MrcProjectArguments,
+)
+from solution.retrieval import RETRIEVAL_HOST
+
+parser = HfArgumentParser(
+    [MrcDataArguments,
+     MrcModelArguments,
+     MrcTrainingArguments,
+     MrcProjectArguments]
+)
+args = parser.parse_yaml_file(yaml_file="configs/example.yaml")
+data_args, model_args, training_args, project_args = args
+
+data_args.dataset_path = "Write YOUR dataset path"
+data_args.context_path = "Write YOUR context file name"
+data_args.rebuilt_index = True
+
+retriever = RETRIEVAL_HOST["elastic_engine"]["elastic_search"](data_args)
+retrieve.retrieve("윤락행위등방지법이 전문 개정되었던 해는?")
+```
