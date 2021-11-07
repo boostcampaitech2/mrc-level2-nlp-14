@@ -14,5 +14,5 @@
     - [bm25.py](https://github.com/boostcampaitech2/mrc-level2-nlp-14/tree/main/solution/retrieval/sparse/bm25.py) : sklearn base의 BM25 함수 구현
     - [tfidf.py](https://github.com/boostcampaitech2/mrc-level2-nlp-14/tree/main/solution/retrieval/sparse/tfidf.py) : sklearn base의 TF-IDF 함수 구현
 
-### UML Diagram of Reader & Trainer
+### UML Diagram of Retrieval
 ![Untitled](https://user-images.githubusercontent.com/88299729/140636333-efaea0c2-2030-4701-b06f-94c0954a91fe.png)
