@@ -13,3 +13,6 @@
     - modeling_heads.py : model의 output head를 conv layer로 바꿀 수 있도록 구현
     - modeling_outputs.py : model의 ouput 값들을 담을 수 있는 dataclass 구현
     - modeling_utils.py : model head를 구성하는데 사용되는 기본적인 layers
+
+## UML Diagram of Reader & Trainer
+![Retreival   Reader Diagram drawio](https://user-images.githubusercontent.com/41335296/140636920-099510a5-b8e0-4920-bd07-71630f9973c6.png)
