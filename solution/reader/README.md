@@ -14,5 +14,5 @@
     - modeling_outputs.py : model의 ouput 값들을 담을 수 있는 dataclass 구현
     - modeling_utils.py : model head를 구성하는데 사용되는 기본적인 layers
 
-## UML Diagram of Reader & Trainer
-![Retreival   Reader Diagram drawio](https://user-images.githubusercontent.com/41335296/140636920-099510a5-b8e0-4920-bd07-71630f9973c6.png)
+### UML Diagram of Reader & Trainer
+![image](https://user-images.githubusercontent.com/37775784/140637094-4f0fad8e-7165-4a11-b7e4-10fd84ceb41d.png)
