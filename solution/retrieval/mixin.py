@@ -19,10 +19,12 @@ from ..utils.constant import (
 )
 
 
-SENTENCE_ENCODER_OUTPUT = Tuple[torch.deivce, PretrainedTokenizer, PreTrainedModel]
+SENTENCE_ENCODER_OUTPUT = Tuple[torch.deivce,
+                                PretrainedTokenizer, PreTrainedModel]
 
 
 class FaissMixin:
+    """ Method for index building using Faiss Library"""
 
     def build_faiss(self, data_path: str, num_clusters: int = 64):
         """ Summary:
@@ -95,6 +97,7 @@ def get_sentence_encoder(
 
 
 class OutputMixin:
+    """ Set of Methods to get retrieval outputs """
 
     def get_dataframe_result(
         self,
