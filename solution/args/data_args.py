@@ -34,7 +34,8 @@ class DataPathArguments(DataArguments):
     )
     masking_type: str = field(
         default="mask",
-        metadata={"help": "choose type of dataset you are going to make (mask , hard)"},
+        metadata={
+            "help": "choose type of dataset you are going to make (mask , hard)"},
     )
     curriculum_learn: bool = field(
         default=False,
@@ -42,7 +43,8 @@ class DataPathArguments(DataArguments):
     )
     curriculum_split_name: Optional[str] = field(
         default="./data/aistage-mrc/train_dataset",
-        metadata={"help": "The name of the dataset split to use(for curriculum learning)"},
+        metadata={
+            "help": "The name of the dataset split to use(for curriculum learning)"},
     )
 
 
@@ -118,7 +120,8 @@ class HighlightingArguments(TokenizerArguments):
     )
     punct_revision: str = field(
         default="main",
-        metadata={"help": "Decide which version of the model to call when performing punctuation."}
+        metadata={
+            "help": "Decide which version of the model to call when performing punctuation."}
     )
     top_k_punctuation: int = field(
         default=10,
@@ -239,11 +242,13 @@ class ElasticSearchArguments(RetrievalArguments):
     )
     use_korean_stopwords: bool = field(
         default=False,
-        metadata={"help": "Decide whether to use the Korean stopword dictionary provided by Elastic Search."}
+        metadata={
+            "help": "Decide whether to use the Korean stopword dictionary provided by Elastic Search."}
     )
     use_korean_synonyms: bool = field(
         default=False,
-        metadata={"help": "Decide whether to use the Korean synonym dictionary provided by Elastic Search."}
+        metadata={
+            "help": "Decide whether to use the Korean synonym dictionary provided by Elastic Search."}
     )
     lowercase: bool = field(
         default=False,
@@ -251,11 +256,13 @@ class ElasticSearchArguments(RetrievalArguments):
     )
     nori_readingform: bool = field(
         default=False,
-        metadata={"help": "Filter rewrites tokens written in Hanja to their Hangul form."}
+        metadata={
+            "help": "Filter rewrites tokens written in Hanja to their Hangul form."}
     )
     cjk_bigram: bool = field(
         default=False,
-        metadata={"help": "Determines whether to use bigram for Chinese, English and Korean."}
+        metadata={
+            "help": "Determines whether to use bigram for Chinese, English and Korean."}
     )
     decimal_digit: bool = field(
         default=False,
@@ -264,7 +271,7 @@ class ElasticSearchArguments(RetrievalArguments):
     dfr_basic_model: str = field(
         default="g",
         metadata={
-            "help": "Basic model of information content for `divergence from randomness`."
+            "help": "Basic model of information content for `divergence from randomness`.",
             "choices": ["g", "if", "in", "ine"],
         }
     )
