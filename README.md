@@ -143,3 +143,41 @@ data_args.rebuilt_index = True
 retriever = RETRIEVAL_HOST["elastic_engine"]["elastic_search"](data_args)
 retrieve.retrieve("윤락행위등방지법이 전문 개정되었던 해는?")
 ```
+
+
+## 5. References
+
+### Paper
+- [Kim et al., Document-Grounded Goal-Oriented Dialogue Systems on Pre-Trained Language Model with Diverse Input Representation, DialDoc 2021](https://aclanthology.org/2021.dialdoc-1.12.pdf)
+- [Xu et al., Curriculum Learning for Natural Language Understanding, ACL 2020](https://aclanthology.org/2020.acl-main.542.pdf)
+- [Omar Khattab and Matei Zaharia, ColBERT: Efficient and Effective Passage Search via Contextualized Late Interaction over BERT, SIGIR 2020](https://arxiv.org/abs/2004.12832)
+
+### Software
+#### Reader
+- [deepset-ai/xlm-roberta-large-squad2](https://huggingface.co/deepset/xlm-roberta-large-squad2)
+- [klue/roberta-large](https://huggingface.co/klue/roberta-large)
+- [huggingface/datasets](https://github.com/huggingface/datasets)
+- [huggingface/transformers](https://github.com/huggingface/transformers)
+- [kakaobrain/pororo](https://github.com/kakaobrain/pororo)
+- [stranford-futuredata/ColBERT]( https://github.com/stanford-futuredata/ColBERT/tree/master/colbert)
+
+#### Retrieval
+- [dorianbrown/rank_bm25](https://github.com/dorianbrown/rank_bm25)
+- [elastricsearch](https://github.com/elastic/elasticsearch-py)
+- [faiss](https://github.com/facebookresearch/faiss)
+- [koreyou/bm25](https://gist.github.com/koreyou/f3a8a0470d32aa56b32f198f49a9f2b8)
+
+#### Pre-post processing
+- [hyunwoongko/kss](https://github.com/hyunwoongko/kss)
+- [konlpy](https://github.com/konlpy/konlpy)
+- [khaiii](https://github.com/kakao/khaiii)
+- [nltk](https://github.com/nltk/nltk)
+- [sentence_transformers](https://github.com/UKPLab/sentence-transformers)
+
+#### ETC
+- [mkorpela/overrides](https://github.com/mkorpela/overrides)
+- [numpy](https://github.com/numpy/numpy)
+- [pandas](https://github.com/pandas-dev/pandas)
+- [pytorch](https://github.com/pytorch/pytorch)
+- [scikit-learn](https://github.com/scikit-learn/scikit-learn)
+- [scipy](https://github.com/scipy/scipy)
