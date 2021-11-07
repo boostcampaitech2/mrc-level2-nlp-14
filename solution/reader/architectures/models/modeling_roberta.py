@@ -31,6 +31,9 @@ class RobertaForQA(RobertaForQuestionAnswering):
 
 
 class RobertaForQAWithConvSDSHead(RobertaForQuestionAnswering):
+    """
+    Roberta model for QA with SDS conv head
+    """
     reader_type: str = "extractive"
 
     def __init__(self, config):
