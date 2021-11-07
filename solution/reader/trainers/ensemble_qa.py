@@ -35,11 +35,11 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
         post_process_function: Callable = None,
         **kwargs
     ):
-        """[summary]
+        """ QA Trainer for Seq2Seq(Generative + Extractive) models
 
         Args:
-            eval_examples (datasets.Dataset, optional): [description]. Defaults to None.
-            post_process_function (Callable, optional): [description]. Defaults to None.
+            eval_examples (datasets.Dataset, optional): Examples for evaluation.
+            post_process_function (Callable, optional): Post process function for model outputs.
         """
 
         super().__init__(*args, eval_examples=eval_examples,
@@ -53,16 +53,25 @@ class QuestionAnsweringEnsembleTrainer(QuestionAnsweringSeq2SeqTrainer):
         prediction_loss_only: bool,
         ignore_keys: Optional[List[str]] = None,
     ) -> Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]:
-        """[summary]
+        """
+        Perform an evaluation step on :obj:`model` using obj:`inputs`.
+
+        Subclass and override to inject custom behavior.
 
         Args:
-            model (nn.Module): [description]
-            inputs (Dict[str, Union[torch.Tensor, Any]]): [description]
-            prediction_loss_only (bool): [description]
-            ignore_keys (Optional[List[str]], optional): [description]. Defaults to None.
+            model (:obj:`nn.Module`):
+                The model to evaluate.
+            inputs (:obj:`Dict[str, Union[torch.Tensor, Any]]`):
+                The inputs and targets of the model.
 
-        Returns:
-            Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]: [description]
+                The dictionary will be unpacked before being fed to the model. Most models expect the targets under the
+                argument :obj:`labels`. Check your model's documentation for all accepted arguments.
+            prediction_loss_only (:obj:`bool`):
+                Whether or not to return the loss only.
+
+        Return:
+            Tuple[Optional[float], Optional[torch.Tensor], Optional[torch.Tensor]]: A tuple with the loss, logits and
+            labels (each being optional).
         """
 
         if not self.args.predict_with_generate or prediction_loss_only:
