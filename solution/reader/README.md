@@ -15,4 +15,4 @@
     - modeling_utils.py : model head를 구성하는데 사용되는 기본적인 layers
 
 ## UML Diagram of Reader & Trainer
-![Retreival   Reader Diagram drawio](https://user-images.githubusercontent.com/41335296/140636920-099510a5-b8e0-4920-bd07-71630f9973c6.png)
+![Retreival   Reader Diagram drawio](https://user-images.githubusercontent.com/41335296/140637044-0260b293-ab3c-41b6-a74d-6238da496920.png)
