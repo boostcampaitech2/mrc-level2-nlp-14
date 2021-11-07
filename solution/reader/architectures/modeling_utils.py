@@ -14,11 +14,10 @@ class QAConvSDSLayer(nn.Module):
         input_size: int,
         hidden_dim: int,
     ):
-        """[summary]
-
+        """
         Args:
-            input_size (int): [description]
-            hidden_dim (int): [description]
+            input_size (int): max sequence lengths
+            hidden_dim (int): backbones's hidden dimension
         """
 
         super().__init__()
@@ -35,7 +34,7 @@ class QAConvSDSLayer(nn.Module):
         )
         self.layer_norm = nn.LayerNorm(hidden_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.conv1(x)
         out = self.conv2(out)
         out = x + torch.relu(out)
@@ -60,7 +59,7 @@ class AttentionLayer(nn.Module):
             config.hidden_size, config.hidden_size, bias=True)
         self.dropout = nn.Dropout(0.1)
 
-    def forward(self, x, token_type_ids):
+    def forward(self, x: torch.Tensor, token_type_ids: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x (torch.Tensor): Layer input
@@ -117,7 +116,7 @@ class ConvLayer(nn.Module):
 
         self.drop_out = nn.Dropout(0.3)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x (torch.Tensor): Layer input

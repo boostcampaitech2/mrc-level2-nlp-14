@@ -72,30 +72,18 @@ class SearchBase(OutputMixin):
 
     @abc.abstractmethod
     def retrieve(self, query, topk, **kwargs) -> Any:
-        """[summary]
-
-        Args:
-            query ([type]): [description]
-            topk ([type]): [description]
-
-        Returns:
-            Any: [description]
         """
-
+        Main method for SearchBase.
+        Subclass and override for custom behavior.
+        """
         pass
 
     @abc.abstractmethod
     def get_relevant_doc(self, query, topk, **kwargs) -> Tuple[List, List]:
-        """[summary]
-
-        Args:
-            query ([type]): [description]
-            topk ([type]): [description]
-
-        Returns:
-            Tuple[List, List]: [description]
         """
-
+        Main method for SearchBase.
+        Subclass and override for custom behavior.
+        """
         pass
 
 
@@ -126,7 +114,9 @@ class RetrievalBase(SearchBase, FaissMixin):
 
     @property
     def p_embedding(self) -> ArrayMatrix:
-        """Get passage embeddings(fix name convention).
+        """
+        Get passage embeddings(fix name convention).
+
         When the object is created, execute the `get_passage_embedding` method
         to get passage embedding from the context attribute.
         """
@@ -139,45 +129,44 @@ class RetrievalBase(SearchBase, FaissMixin):
 
     @abc.abstractmethod
     def get_query_embedding(self, query, **kwargs):
-        """Get query embedding.
-        This method is called dynamically 
+        """
+        Get query embedding.
+
+        This method is called dynamically
         when the `get_relevant_doc` method is executed.
 
-        Args:
-            query ([type]): [description]
+        Subclass and override for custom behavior.
         """
-
         pass
 
     @abc.abstractmethod
     def get_passage_embedding(self, passage, **kwargs):
-        """Get passage embedding.
+        """
+        Get passage embedding.
+
         This method is executed when the object is created.
         For efficient retrieval, the cache file is stored
         in the `context_file_path` at the first call.
 
-        Args:
-            passage ([type]): [description]
+        Subclass and override for custom behavior.
         """
 
         pass
 
     @abc.abstractmethod
     def get_topk_documents(self, query_embs, topk, use_faiss, **kwargs):
-        """Get top-k documents and ids among query and documents.
+        """
+        Get top-k documents and ids among query and documents.
 
         Follow the steps below.
             1. Calculate the similarity among query and passage embedding
                based on the given similarity function(`calculate_scores`).
             2. Returns the top-k documents with the highest similarity and their index.
-            If you use faiss library, faiss does the second job for you.
 
-        Args:
-            query_embs ([type]): [description]
-            topk ([type]): [description]
-            use_faiss ([type]): [description]
+        If you use faiss library, faiss does the second job for you.
+
+        Subclass and override for custom behavior.
         """
-
         pass
 
     def retrieve(
@@ -187,7 +176,8 @@ class RetrievalBase(SearchBase, FaissMixin):
         eval_mode: bool = True,
         **kwargs,
     ) -> Union[Tuple[List, List], DataFrame]:
-        """Retrieves the top k most similar documents from the input query
+        """
+        Retrieves the top k most similar documents from the input query
         and returns them as `DatasetDict` objects in the huggingface Datasets.
 
         Args:

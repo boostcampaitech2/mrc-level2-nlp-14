@@ -55,7 +55,7 @@ def remove_special_token(examples):
 
 
 def get_extractive_features(tokenizer, mode, data_args):
-    """Tokenize and Reset input dataset for extractive model
+    """ Get extractive features for train, eval and test.
 
     Args:
         tokenizer (BERT Tokenizer): tokenizer for preprocessing
@@ -343,7 +343,7 @@ def get_generative_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
-        """Preprocessing train dataset for generative model
+        """Preprocessing train and validation dataset for generative model
 
         Args:
             examples (Dict): DatasetDict
@@ -431,7 +431,7 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
-        """Preprocessing train dataset for ensemble model
+        """Preprocessing train and validation dataset for ensemble model
 
         Args:
             examples (Dict): DatasetDict

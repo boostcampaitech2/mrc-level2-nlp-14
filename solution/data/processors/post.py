@@ -34,7 +34,7 @@ logger = logging.get_logger(__name__)
 
 
 def make_bracket_pair(
-    text
+    text: str
 ):
     """If the beginning or end of the text is in brackets, but there is only one side, match the pair,
     and if '(' appears in the middle of the text but ')' does not appear at the end, remove the the back of '(' and return it.
@@ -290,12 +290,12 @@ def save_pred_json(
         else f"nbest_predictions_{prefix}.json",
     )
 
-    logger.info(f"Saving predictions to {prediction_file}.")
+    logger.warning(f"Saving predictions to {prediction_file}.")
     with open(prediction_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n"
         )
-    logger.info(f"Saving nbest_preds to {nbest_file}.")
+    logger.warning(f"Saving nbest_preds to {nbest_file}.")
     with open(nbest_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(all_nbest_json, indent=4, ensure_ascii=False) + "\n"
@@ -522,49 +522,36 @@ def postprocess_qa_predictions(
     is_world_process_zero: bool = True,
     do_pos_ensemble: bool = False,
 ):
-    """[summary]
+    """
+    A function that post-processes the presentation value of the QA model.
+    since the model returns start logit and end logit, post-processing is required to change to original text based on this.
 
     Args:
-        examples ([type]): [description]
-        features ([type]): [description]
-        predictions (Tuple[np.ndarray, np.ndarray]): [description]
-        n_best_size (int, optional): [description]. Defaults to 20.
-        max_answer_length (int, optional): [description]. Defaults to 30.
-        output_dir (Optional[str], optional): [description]. Defaults to None.
-        prefix (Optional[str], optional): [description]. Defaults to None.
-        is_world_process_zero (bool, optional): [description]. Defaults to True.
-        do_pos_ensemble (bool, optional): [description]. Defaults to False.
-
-    Returns:
-        [type]: [description]
-    """
-
-    """
-    Post-processes : qa model의 prediction 값을 후처리하는 함수
-    모델은 start logit과 end logit을 반환하기 때문에, 이를 기반으로 original text로 변경하는 후처리가 필요함
-
-    Args:
-        examples: 전처리 되지 않은 데이터셋 (see the main script for more information).
-        features: 전처리가 진행된 데이터셋 (see the main script for more information).
+        examples: raw dataset.
+        features: preprocessed dataset
         predictions (:obj:`Tuple[np.ndarray, np.ndarray]`):
-            모델의 예측값 :start logits과 the end logits을 나타내는 two arrays, 첫번째 차원은 :obj:`features`의 element와 갯수가 맞아야함.
+            model predictions : start logits and two arrays representing the end logits,
+            and the first dimension :obj:'features' element must match the number.
         n_best_size (:obj:`int`, `optional`, defaults to 20):
-            답변을 찾을 때 생성할 n-best prediction 총 개수
+            total number of n-best presentations to generate when looking for answers
         max_answer_length (:obj:`int`, `optional`, defaults to 30):
-            생성할 수 있는 답변의 최대 길이
+            the maximum length of the answer that can be predicted.
         output_dir (:obj:`str`, `optional`):
-            아래의 값이 저장되는 경로
+            save path
             dictionary : predictions, n_best predictions (with their scores and logits) if:obj:`version_2_with_negative=True`,
             dictionary : the scores differences between best and null answers
         prefix (:obj:`str`, `optional`):
-            dictionary에 `prefix`가 포함되어 저장됨
+            prefix is included in the dictionary and stored.
         is_world_process_zero (:obj:`bool`, `optional`, defaults to :obj:`True`):
-            이 프로세스가 main process인지 여부(logging/save를 수행해야 하는지 여부를 결정하는 데 사용됨)
+            whether this process is the main process (used to determine whether logging/saving should be performed)
+    
+    Returns:
+        [Dict]: total prediction of examples
     """
 
     # Logging.
     logger.setLevel(logging.INFO if is_world_process_zero else logging.WARN)
-    logger.info(
+    logger.warning(
         f"Post-processing {len(examples)} example predictions split into {len(features)} features."
     )
 
@@ -609,19 +596,19 @@ def post_processing_function(
     training_args,
     mode,
 ):
-    """[summary]
+    """
+    main function of post_process
 
     Args:
-        examples ([type]): [description]
-        features ([type]): [description]
-        predictions ([type]): [description]
-        training_args ([type]): [description]
-        mode ([type]): [description]
+        example ([Dataset]): raw datasets.
+        features ([Dataset]): tokenized & splited datasets.
+        predictions ([Dict]): predcitions
+        training_args ([type]): arguments
+        mode ([str]): status of model training(train, eval, predict)
 
     Returns:
-        [type]: [description]
+        [Dict]: predictions
     """
-
     if mode == 'predict' and training_args.do_pos_ensemble:
         training_args.do_pos_ensemble = True
     else:
@@ -687,7 +674,7 @@ def gen_postprocessing_function(examples, predictions, training_args, tokenizer)
     output_dir = training_args.output_dir
     assert os.path.isdir(output_dir), f"{output_dir} is not a directory."
     prediction_file = os.path.join(output_dir, "predictions.json")
-    logger.info(f"Saving predictions to {prediction_file}.")
+    logger.warning(f"Saving predictions to {prediction_file}.")
     with open(prediction_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(formatted_predictions, indent=4,

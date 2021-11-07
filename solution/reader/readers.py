@@ -29,9 +29,3 @@ class EnsembleReader(ReaderBase):
     reader_type: str = "ensemble"
     default_model: PreTrainedModel = AutoModelForSeq2SeqLM
     default_trainer: BaseTrainer = QuestionAnsweringEnsembleTrainer
-
-
-class RetroReader(ReaderBase):
-    reader_type: str = "retrospective"
-    default_model: PreTrainedModel = None
-    default_trainer: BaseTrainer = None
