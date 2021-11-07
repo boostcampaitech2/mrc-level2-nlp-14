@@ -55,22 +55,22 @@ def remove_special_token(examples):
 
 
 def get_extractive_features(tokenizer, mode, data_args):
-    """[summary]
+    """Tokenize and Reset input dataset for extractive model
 
     Args:
-        tokenizer ([type]): [description]
-        mode ([type]): [description]
-        data_args ([type]): [description]
+        tokenizer (BERT Tokenizer): tokenizer for preprocessing
+        mode (str): [description] : one of train, eval, test
+        data_args (DataArguments): data arguments
     """
 
     def tokenize_fn(examples):
-        """[summary]
+        """Tokenize questions and contexts
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         pad_on_right = tokenizer.padding_side == "right"
@@ -102,7 +102,8 @@ def get_extractive_features(tokenizer, mode, data_args):
 
     def get_underline_embedding(tokenized_examples):
         """
-        Create underline_ids that flags sentences with high similarity scores to the question to 1 for underline embedding layer.
+        Create underline_ids that flags sentences with high similarity scores to the question to 1 
+        for underline embedding layer.
         Punctuations are attached at the beginning and end of sentences with high similarity scores.
 
         Args:
@@ -134,13 +135,15 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_train_features(examples):
-        """[summary]
+        """
+        Reset for train dataset that do not have the correct answer 
+        or where the correct answer position has changed.
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples where the answer has been reset
         """
 
         pad_on_right = tokenizer.padding_side == "right"
@@ -232,14 +235,14 @@ def get_extractive_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_validation_features(examples, retriever=None):
-        """[summary]
+        """Preprocessing validation dataset for extractive model
 
         Args:
-            examples ([type]): [description]
-            retriever ([type], optional): [description]. Defaults to None.
+            examples (Dict): DatasetDict
+            retriever (Dict): DatasetDict from wiki. Defaults to None.
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         pad_on_right = tokenizer.padding_side == "right"
@@ -290,22 +293,22 @@ def get_extractive_features(tokenizer, mode, data_args):
 
 
 def get_generative_features(tokenizer, mode, data_args):
-    """[summary]
+    """Tokenize and Reset input dataset for generative model
 
     Args:
-        tokenizer ([type]): [description]
-        mode ([type]): [description]
-        data_args ([type]): [description]
+        tokenizer (BERT Tokenizer): tokenizer for preprocessing
+        mode (str): [description] : one of train, eval, test
+        data_args (DataArguments): data arguments
     """
 
     def tokenize_fn(examples):
-        """[summary]
+        """Tokenize questions and contexts
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         model_inputs = [f"질문: {q} 지문: {c} </s>"
@@ -320,13 +323,13 @@ def get_generative_features(tokenizer, mode, data_args):
         return output
 
     def tokenize_fn_labels(examples):
-        """[summary]
+        """Tokenize answers
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
@@ -340,13 +343,13 @@ def get_generative_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
-        """[summary]
+        """Preprocessing train dataset for generative model
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         tokenized_examples = tokenize_fn(examples)
@@ -355,13 +358,13 @@ def get_generative_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_test_features(examples):
-        """[summary]
+        """Preprocessing test dataset for generative model
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         tokenized_examples = tokenize_fn(examples)
@@ -378,22 +381,22 @@ def get_generative_features(tokenizer, mode, data_args):
 
 
 def get_ensemble_features(tokenizer, mode, data_args):
-    """[summary]
+    """Tokenize and Reset input dataset for ensemble model
 
     Args:
-        tokenizer ([type]): [description]
-        mode ([type]): [description]
-        data_args ([type]): [description]
+        tokenizer (BERT Tokenizer): tokenizer for preprocessing
+        mode (str): [description] : one of train, eval, test
+        data_args (DataArguments): data arguments
     """
 
     def tokenize_fn(examples):
-        """[summary]
+        """Tokenize questions and contexts
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         output = tokenizer(
@@ -408,13 +411,13 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return output
 
     def tokenize_fn_labels(examples):
-        """[summary]
+        """Tokenize answers
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         labels = [f"{answer['text'][0]} </s>" for answer in examples["answers"]]
@@ -428,13 +431,13 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return labels
 
     def prepare_train_features(examples):
-        """[summary]
+        """Preprocessing train dataset for ensemble model
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         pad_on_right = tokenizer.padding_side == "right"
@@ -497,13 +500,13 @@ def get_ensemble_features(tokenizer, mode, data_args):
         return tokenized_examples
 
     def prepare_test_features(examples):
-        """[summary]
+        """Preprocessing test dataset for ensemble model
 
         Args:
-            examples ([type]): [description]
+            examples (Dict): DatasetDict
 
         Returns:
-            [type]: [description]
+            Dict: Tokenized examples
         """
 
         pad_on_right = tokenizer.padding_side == "right"

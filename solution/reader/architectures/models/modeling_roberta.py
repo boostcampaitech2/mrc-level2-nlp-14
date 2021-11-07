@@ -349,14 +349,11 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
         )
 
 
-class RobertaForQAWithUnderline(RobertaPreTrainedModel):
+class RobertaForQAWithUnderline(RobertaForQuestionAnswering):
     """
     Roberta model for QA with undeline embedding layer
     """
     reader_type: str = "extractive"
-
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
-    _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def __init__(self, config):
         super().__init__(config)
