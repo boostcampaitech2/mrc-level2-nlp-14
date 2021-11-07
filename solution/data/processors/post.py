@@ -34,11 +34,10 @@ logger = logging.get_logger(__name__)
 
 
 def make_bracket_pair(
-    text
+    text: str
 ):
-    """
-    If the beginning or end of the text is in brackets, but there is only one side, match the pair,
-    and if '(' appears in the middle of the text but ')' does not appear at the end, remove the the back of '(' and return it
+    """If the beginning or end of the text is in brackets, but there is only one side, match the pair,
+    and if '(' appears in the middle of the text but ')' does not appear at the end, remove the the back of '(' and return it.
 
     Args:
         text ([str]): pred_answer.
@@ -103,8 +102,7 @@ def get_pos_tagged_from_word(
 def get_pos_tagged_from_sentence(
     ref_text, stride, pred_answer, analyzer
 ):
-    """
-    The part corresponding to pred_answer among the morpheme analysis results of ref_text is returned,
+    """The part corresponding to pred_answer among the morpheme analysis results of ref_text is returned,
     and if an IndexError occurs during the mapping process, it is returned as get_pos_tagged_from_word.
 
     Args:
@@ -162,8 +160,7 @@ def get_pos_tagged_from_sentence(
 def get_pos_ensemble(
     pred_answer, ref_text, stride
 ):
-    """
-    After determining whether pred_answer ends with an postposition based on the results of the morpheme analysis ensemble,
+    """After determining whether pred_answer ends with an postposition based on the results of the morpheme analysis ensemble,
     if it ends with an postposition, remove the postposition and return it.
 
     Args:
@@ -214,8 +211,7 @@ def get_pos_ensemble(
 def pred_answer_post_process(
     context, offsets
 ):
-    """
-    After preprocessing of pred_answer as the main function of the post-processing function,
+    """After preprocessing of pred_answer as the main function of the post-processing function,
     return the result through get_pos_enssemble, make_bracket_pair.
 
     Args:
@@ -272,8 +268,7 @@ def pred_answer_post_process(
 def save_pred_json(
     all_predictions, all_nbest_json, output_dir, prefix
 ):
-    """
-    Save prediction.json, nbest_predctions.json in output_dir.
+    """Save prediction.json, nbest_predctions.json in output_dir.
 
     Args:
         all_predictions ([Dict]): total prediction to be updated.
@@ -295,12 +290,12 @@ def save_pred_json(
         else f"nbest_predictions_{prefix}.json",
     )
 
-    logger.info(f"Saving predictions to {prediction_file}.")
+    logger.warning(f"Saving predictions to {prediction_file}.")
     with open(prediction_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(all_predictions, indent=4, ensure_ascii=False) + "\n"
         )
-    logger.info(f"Saving nbest_preds to {nbest_file}.")
+    logger.warning(f"Saving nbest_preds to {nbest_file}.")
     with open(nbest_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(all_nbest_json, indent=4, ensure_ascii=False) + "\n"
@@ -310,8 +305,7 @@ def save_pred_json(
 def get_all_logits(
     predictions, features
 ):
-    """
-    After checking assertions against predictions and features length,
+    """After checking assertions against predictions and features length,
     return start & end logtis.
 
     Args:
@@ -337,8 +331,7 @@ def get_all_logits(
 def map_features_to_example(
     examples, features
 ):
-    """
-    Returns the mapping of feature indices to example index.
+    """Returns the mapping of feature indices to example index.
 
     Args:
         examples ([Dataset]): raw datasets.
@@ -361,8 +354,7 @@ def map_features_to_example(
 def get_candidate_preds(
     features, feature_indices, all_start_logits, all_end_logits, n_best_size, max_answer_length
 ):
-    """
-    It returns predictions of n_best_size of features mapped to one exmaple.
+    """It returns predictions of n_best_size of features mapped to one exmaple.
 
     Args:
         features ([Dataset]): tokenized & splited datasets.
@@ -457,8 +449,7 @@ def get_candidate_preds(
 def get_example_prediction(
     example, predictions, all_predictions, all_nbest_json, do_pos_ensemble
 ):
-    """
-    Convert offset from a presentation from an excel to an answer text,
+    """Convert offset from a presentation from an excel to an answer text,
     and return by adding a presentation to all_prediction and all_nbest_json.
 
     Args:
@@ -532,30 +523,35 @@ def postprocess_qa_predictions(
     do_pos_ensemble: bool = False,
 ):
     """
-    Post-processes : qa model의 prediction 값을 후처리하는 함수
-    모델은 start logit과 end logit을 반환하기 때문에, 이를 기반으로 original text로 변경하는 후처리가 필요함
+    A function that post-processes the presentation value of the QA model.
+    since the model returns start logit and end logit, post-processing is required to change to original text based on this.
 
     Args:
-        examples: 전처리 되지 않은 데이터셋 (see the main script for more information).
-        features: 전처리가 진행된 데이터셋 (see the main script for more information).
+        examples: raw dataset.
+        features: preprocessed dataset
         predictions (:obj:`Tuple[np.ndarray, np.ndarray]`):
-            모델의 예측값 :start logits과 the end logits을 나타내는 two arrays, 첫번째 차원은 :obj:`features`의 element와 갯수가 맞아야함.
+            model predictions : start logits and two arrays representing the end logits,
+            and the first dimension :obj:'features' element must match the number.
         n_best_size (:obj:`int`, `optional`, defaults to 20):
-            답변을 찾을 때 생성할 n-best prediction 총 개수
+            total number of n-best presentations to generate when looking for answers
         max_answer_length (:obj:`int`, `optional`, defaults to 30):
-            생성할 수 있는 답변의 최대 길이
+            the maximum length of the answer that can be predicted.
         output_dir (:obj:`str`, `optional`):
-            아래의 값이 저장되는 경로
+            save path
             dictionary : predictions, n_best predictions (with their scores and logits) if:obj:`version_2_with_negative=True`,
             dictionary : the scores differences between best and null answers
         prefix (:obj:`str`, `optional`):
-            dictionary에 `prefix`가 포함되어 저장됨
+            prefix is included in the dictionary and stored.
         is_world_process_zero (:obj:`bool`, `optional`, defaults to :obj:`True`):
-            이 프로세스가 main process인지 여부(logging/save를 수행해야 하는지 여부를 결정하는 데 사용됨)
+            whether this process is the main process (used to determine whether logging/saving should be performed)
+    
+    Returns:
+        [Dict]: total prediction of examples
     """
+
     # Logging.
     logger.setLevel(logging.INFO if is_world_process_zero else logging.WARN)
-    logger.info(
+    logger.warning(
         f"Post-processing {len(examples)} example predictions split into {len(features)} features."
     )
 
@@ -600,6 +596,19 @@ def post_processing_function(
     training_args,
     mode,
 ):
+    """
+    main function of post_process
+
+    Args:
+        example ([Dataset]): raw datasets.
+        features ([Dataset]): tokenized & splited datasets.
+        predictions ([Dict]): predcitions
+        training_args ([type]): arguments
+        mode ([str]): status of model training(train, eval, predict)
+
+    Returns:
+        [Dict]: predictions
+    """
     if mode == 'predict' and training_args.do_pos_ensemble:
         training_args.do_pos_ensemble = True
     else:
@@ -632,12 +641,18 @@ def post_processing_function(
 
 
 def gen_postprocessing_function(examples, predictions, training_args, tokenizer):
+    """Remove the spaces before and after the answer
+
+    Args:
+        example ([Dataset]): raw datasets
+        predictions ([Dict]): predcitions
+        training_args ([TrainingArguments]): training arguments
+        tokenizer ([Bert tokenizer]): tokenizer
+
+    Returns:
+        Dict: predictions
     """
-    postprocess는 nltk를 이용합니다.
-    Huggingface의 TemplateProcessing을 사용하여
-    정규표현식 기반으로 postprocess를 진행할 수 있지만
-    해당 미션에서는 nltk를 이용하여 간단한 후처리를 진행합니다
-    """
+
     import nltk
     nltk.download('punkt')
 
@@ -659,7 +674,7 @@ def gen_postprocessing_function(examples, predictions, training_args, tokenizer)
     output_dir = training_args.output_dir
     assert os.path.isdir(output_dir), f"{output_dir} is not a directory."
     prediction_file = os.path.join(output_dir, "predictions.json")
-    logger.info(f"Saving predictions to {prediction_file}.")
+    logger.warning(f"Saving predictions to {prediction_file}.")
     with open(prediction_file, "w", encoding="utf-8") as writer:
         writer.write(
             json.dumps(formatted_predictions, indent=4,

@@ -31,6 +31,9 @@ class RobertaForQA(RobertaForQuestionAnswering):
 
 
 class RobertaForQAWithConvSDSHead(RobertaForQuestionAnswering):
+    """
+    Roberta model for QA with SDS conv head
+    """
     reader_type: str = "extractive"
 
     def __init__(self, config):
@@ -157,7 +160,7 @@ class RobertaForQAWithConvHead(RobertaPreTrainedModel):
 
 class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
     """
-    Same as BertEmbeddings with a tiny tweak for positional embeddings indexing.
+    Roberta Embeddings with undeline embeddings
     """
 
     def __init__(self, config):
@@ -217,6 +220,9 @@ class RobertaEmbeddingsWithUnderline(RobertaEmbeddings):
 
 
 class RobertaModelWithUnderline(RobertaPreTrainedModel):
+    """
+    Roberta model with undeline embedding layer
+    """
 
     _keys_to_ignore_on_load_missing = [r"position_ids"]
 
@@ -346,11 +352,11 @@ class RobertaModelWithUnderline(RobertaPreTrainedModel):
         )
 
 
-class RobertaForQAWithUnderline(RobertaPreTrainedModel):
+class RobertaForQAWithUnderline(RobertaForQuestionAnswering):
+    """
+    Roberta model for QA with undeline embedding layer
+    """
     reader_type: str = "extractive"
-
-    _keys_to_ignore_on_load_unexpected = [r"pooler"]
-    _keys_to_ignore_on_load_missing = [r"position_ids"]
 
     def __init__(self, config):
         super().__init__(config)

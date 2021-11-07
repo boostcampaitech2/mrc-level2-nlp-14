@@ -2,21 +2,32 @@ import os
 import faiss
 import pandas as pd
 import numpy as np
+from typing import Tuple, Union
 from tqdm.auto import tqdm
 import torch
 from datasets import Dataset, DatasetDict
-from transformers import AutoModel, AutoTokenizer
-from solution.utils.constant import (
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
+from ..args import DataArguments
+from ..utils.constant import (
     MRC_EVAL_FEATURES,
-    MRC_PREDICT_FEATURES
+    MRC_PREDICT_FEATURES,
 )
 
 
+SENTENCE_ENCODER_OUTPUT = Tuple[torch.deivce,
+                                PretrainedTokenizer, PreTrainedModel]
+
+
 class FaissMixin:
+    """ Method for index building using Faiss Library"""
 
     def build_faiss(self, data_path: str, num_clusters: int = 64):
-        """
-        Summary:
+        """ Summary:
             속성으로 저장되어 있는 Passage Embedding을
             Faiss indexer에 fitting 시켜놓습니다.
             이렇게 저장된 indexer는 `get_relevant_doc`에서 유사도를 계산하는데 사용됩니다.
@@ -27,6 +38,7 @@ class FaissMixin:
             다만 이 index 파일은 용량이 1.4Gb+ 이기 때문에 여러 num_clusters로 시험해보고
             제일 적절한 것을 제외하고 모두 삭제하는 것을 권장합니다.
         """
+
         indexer_name = f"faiss_clusters{num_clusters}.index"
         indexer_path = os.path.join(data_path, indexer_name)
         if os.path.isfile(indexer_path):
@@ -49,7 +61,43 @@ class FaissMixin:
             print("Faiss Indexer Saved.")
 
 
+def get_sentence_encoder(
+    args: DataArguments,
+) -> Union[SENTENCE_ENCODER_OUTPUT, Tuple[None, None, None]]:
+    """Get sentence encoder used for punctuation mode.
+
+    Arguments:
+        args (DataArguments): Retrieval's data arguments
+
+    Returns:
+        devices (torch.device): cpu or gpu
+        tokenizer (PreTrainedTokenizer): 🤗 tokenizer object
+        sentence_encoder (PreTrainedModel): 🤗 pretrained model object
+    """
+
+    device = None
+    tokenizer = None
+    sentence_encoder = None
+
+    if args.do_punctuation == True:
+        device = torch.device(
+            'cuda:0' if torch.cuda.is_available() else 'cpu')
+        tokenizer = AutoTokenizer.from_pretrained(
+            args.punct_model_name_or_path,
+            use_auth_token=args.punct_use_auth_token,
+            revision=args.punct_revision
+        )
+        sentence_encoder = AutoModel.from_pretrained(
+            args.punct_model_name_or_path,
+            use_auth_token=args.punct_use_auth_token,
+            revision=args.punct_revision
+        ).to(device)
+
+    return device, tokenizer, sentence_encoder
+
+
 class OutputMixin:
+    """ Set of Methods to get retrieval outputs """
 
     def get_dataframe_result(
         self,
@@ -58,31 +106,14 @@ class OutputMixin:
         doc_indices,
         doc_contexts=None,
     ) -> pd.DataFrame:
-        """
-        Retrieval 결과를 DataFrame으로 정리하여 반환합니다.
-        """
-        # Need to modifiy the arguement
-        if self.args.do_punctuation == False:
-            device = torch.device(
-                'cuda:0' if torch.cuda.is_available() else 'cpu')
-            tokenizer = AutoTokenizer.from_pretrained(
-                self.args.punct_model_name_or_path,
-                use_auth_token=self.args.punct_use_auth_token,
-                revision=self.args.punct_revision
-            )
+        """ Convert retrieval results to pd.DastaFrame """
 
-            sentence_encoder = AutoModel.from_pretrained(
-                self.args.punct_model_name_or_path,
-                use_auth_token=self.args.punct_use_auth_token,
-                revision=self.args.punct_revision
-            ).to(device)
-        else:
-            device = None
-            tokenizer = None
-            sentence_encoder = None
+        # If self.args.do_punctuation is True,
+        # then return tokenizer and model used for punctuation mode
+        # O.W (None, None, None)
+        device, tokenizer, sentence_encoder = get_sentence_encoder(self.args)
 
         total = []
-
         for idx, example in enumerate(tqdm(query_or_dataset)):
             if doc_contexts:
                 contexts = doc_contexts[idx]
@@ -116,6 +147,8 @@ class OutputMixin:
         df: pd.DataFrame,
         eval_mode: bool = True,
     ) -> DatasetDict:
+        """ Convert dataframe to datasetdict """
+
         features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
         datasets = DatasetDict(
             {"validation": Dataset.from_pandas(df, features=features)}
@@ -127,6 +160,8 @@ class OutputMixin:
         df: pd.DataFrame,
         eval_mode: bool = True,
     ) -> Dataset:
+        """ Convert dataframe to dataset """
+
         features = MRC_EVAL_FEATURES if eval_mode else MRC_PREDICT_FEATURES
         datasets = Dataset.from_pandas(df, features=features)
         return datasets
@@ -140,10 +175,16 @@ class OutputMixin:
         device
     ) -> str:
         """
-        Process retrieved topk wiki context
+        Remove unnecessary symbols from top-k wiki contexts.
+        If do_punctuation is True,
+        put punctuations at the beginning and end of top-k sentences with high similarity scores to the question.
 
         Args:
-            contexts (List[str]): list of wiki contexts
+            contexts (List[str]): list of top-k wiki contexts
+            question (str): a question
+            sentece_encoder (AutoModel): Encoder for Encoding each sentence in the context and a question
+            tokenizer (AutoTokenizer): Tokenizer for text tokenization
+            device (torch.device): Setting up CUDA to use GPU
 
         Returns:
             str: joined wiki context
@@ -152,8 +193,9 @@ class OutputMixin:
         if self.args.do_punctuation == False:
             contexts = "#".join(contexts)
             contexts = contexts.split('#')
-            contexts = [context.split(
-                '[TITLE]')[-1] if '[TITLE]' in context else context for context in contexts]
+            for i, context in enumerate(contexts):
+                if "[TITLE]" in context:
+                    contexts[i] = context.split('[TITLE]')[-1]
             return " ".join(contexts)
         else:
             q_seqs = tokenizer(
@@ -175,8 +217,7 @@ class OutputMixin:
 
             p_inputs = {'input_ids': p_seqs['input_ids'].to(device),
                         'attention_mask': p_seqs['attention_mask'].to(device),
-                        'token_type_ids': p_seqs['token_type_ids'].to(device)
-                        }
+                        'token_type_ids': p_seqs['token_type_ids'].to(device)}
 
             q_inputs = {'input_ids': q_seqs['input_ids'].to(device),
                         'attention_mask': q_seqs['attention_mask'].to(device),
@@ -198,8 +239,6 @@ class OutputMixin:
             for i, sentence in enumerate(contexts):
                 if i in topk_sentences:
                     sentence = '^' + sentence + '※'
-                    new_contexts.append(sentence)
-                else:
-                    new_contexts.append(sentence)
+                new_contexts.append(sentence)
 
             return " ".join(new_contexts)

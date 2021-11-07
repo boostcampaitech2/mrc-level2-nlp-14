@@ -4,11 +4,6 @@ from dataclasses import dataclass, field
 from .base import DataArguments
 from .argparse import lambda_field
 
-"""
-DATA ARGS의 항목이 너무 많아서 지저분하다.
-이를 세분화해서 어떤 PARAMETER를 건드리면 되는지 일러줘야 한다.
-"""
-
 
 @dataclass
 class DataPathArguments(DataArguments):
@@ -58,24 +53,26 @@ class TokenizerArguments(DataPathArguments):
     max_seq_length: int = field(
         default=384,
         metadata={
-            "help": "The maximum total input sequence length after tokenization. Sequences longer "
-            "than this will be truncated, sequences shorter will be padded."
+            "help": (
+                "The maximum total input sequence length after tokenization. "
+                "Sequences longer than this will be truncated, sequences shorter will be padded."
+            )
         },
     )
 
     max_label_length: int = field(
         default=128,
-        metadata={
-            "help": "The maximum label length after tokenization. Sequences longer "
-        }
+        metadata={"help": "The maximum label length after tokenization."}
     )
 
     pad_to_max_length: bool = field(
         default=False,
         metadata={
-            "help": "Whether to pad all samples to `max_seq_length`. "
-            "If False, will pad the samples dynamically when batching to the maximum length in the batch (which can "
-            "be faster on GPU but will be slower on TPU)."
+            "help": (
+                "Whether to pad all samples to `max_seq_length`. "
+                "If False, will pad the samples dynamically when batching to the maximum length in the batch "
+                "(which can be faster on GPU but will be slower on TPU)."
+            )
         },
     )
     doc_stride: int = field(
@@ -86,7 +83,9 @@ class TokenizerArguments(DataPathArguments):
     )
     return_token_type_ids: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={
+            "help": "Decide whether or not to return `token_type_ids` as a tokenize result."
+        }
     )
 
 
@@ -95,7 +94,8 @@ class HighlightingArguments(TokenizerArguments):
     do_underline: bool = field(
         default=False,
         metadata={
-            "help": "Whether to add underline embedding at the time of tokenizing or not"},
+            "help": "Whether to add underline embedding at the time of tokenizing or not"
+        },
     )
     do_punctuation: bool = field(
         default=False,
@@ -104,7 +104,8 @@ class HighlightingArguments(TokenizerArguments):
     punct_model_name_or_path: str = field(
         default="./outputs/run_test",
         metadata={
-            "help": "Path to pretrained model or model identifier from huggingface.co/models"}
+            "help": "Path to pretrained model or model identifier from huggingface.co/models"
+        }
     )
     punct_max_seq_length: int = field(
         default=100,
@@ -115,11 +116,12 @@ class HighlightingArguments(TokenizerArguments):
     )
     punct_use_auth_token: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={"help": "Decide whether to use auth_token for puctuation."}
     )
     punct_revision: str = field(
         default="main",
-        metadata={"help": ""}
+        metadata={
+            "help": "Decide which version of the model to call when performing punctuation."}
     )
     top_k_punctuation: int = field(
         default=10,
@@ -133,23 +135,29 @@ class HighlightingArguments(TokenizerArguments):
 class RetrievalArguments(HighlightingArguments):
     retrieval_mode: str = field(
         default="sparse",
-        metadata={"help": ""}
+        metadata={
+            "help": "Decide which retrieval mode to call.",
+            "choices": ["sparse", "dense", "elastic_engine"],
+        }
     )
     retrieval_name: str = field(
         default="tfidf",
-        metadata={"help": ""}
+        metadata={
+            "help": "Decide which retrieval class to call.",
+            "choices": ["tfidf", "okapi_bm25", "dpr", "colbert", "elastic_search"],
+        }
     )
     rebuilt_index: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={"help": "Decide whether to rebuild search engine indexes."}
     )
     retrieval_tokenizer_name: str = field(
         default="mecab",
-        metadata={"help": ""}
+        metadata={"help": "Decide which search engine tokenizer to use."}
     )
     retrieval_model_path: str = field(
         default="./dense_retrieval",
-        metadata={"help": ""}
+        metadata={"help": "Specifies the path to the retrieval model."}
     )
     sp_max_features: int = field(
         default=50000,
@@ -172,7 +180,8 @@ class RetrievalArguments(HighlightingArguments):
     eval_retrieval: bool = field(
         default=True,
         metadata={
-            "help": "Whether to run passage retrieval using sparse embedding."},
+            "help": "Whether to run passage retrieval using sparse embedding."
+        },
     )
     num_clusters: int = field(
         default=64,
@@ -184,99 +193,137 @@ class RetrievalArguments(HighlightingArguments):
 class ElasticSearchArguments(RetrievalArguments):
     index_name: str = field(
         default="wiki-index",
-        metadata={"help": ""}
+        metadata={"help": "The name of the index to use in Elasticsearch."}
     )
     stopword_path: str = field(
         default="user_dic/my_stop_dic.txt",
-        metadata={"help": ""}
+        metadata={"help": "Path of stopword to use in Elasticsearch."}
     )
     decompound_mode: str = field(
         default="mixed",
-        metadata={"help": ""}
+        metadata={
+            "help": "Determines how the tokenizer handles compound tokens."
+            "https://www.elastic.co/guide/en/elasticsearch/plugins/current/analysis-nori-tokenizer.html"
+        }
     )
     b: float = field(
         default=0.75,
-        metadata={"help": "[0.3 ~ 0.8]"}
+        metadata={
+            "help": "Controls to what degree document length normalizes tf values. "
+            "The default value is 0.75"
+        }
     )
     k1: float = field(
         default=1.2,
-        metadata={"help": "[1.2 ~ 2.0]"}
+        metadata={
+            "help": "Controls non-linear term frequency normalization (saturation). "
+            "The default value is 1.2."
+        }
     )
     es_host_address: str = field(
         default="localhost:9200",
-        metadata={"help": ""}
+        metadata={"help": "Network host address"}
     )
     es_timeout: int = field(
         default=30,
-        metadata={"help": ""}
+        metadata={"help": "Determine connection timeout thershold."}
     )
     es_max_retries: int = field(
         default=10,
-        metadata={"help": ""}
+        metadata={"help": "Determine connection timeout thershold."}
     )
     es_retry_on_timeout: bool = field(
         default=True,
-        metadata={"help": ""}
+        metadata={"help": "Specifies the maximum number of connection attempts."}
     )
     es_similarity: str = field(
         default="bm25_similarity",
-        metadata={"help": ""}
+        metadata={"help": "Decide which similarity calculation to use."}
     )
     use_korean_stopwords: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={
+            "help": "Decide whether to use the Korean stopword dictionary provided by Elastic Search."}
     )
     use_korean_synonyms: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={
+            "help": "Decide whether to use the Korean synonym dictionary provided by Elastic Search."}
     )
     lowercase: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={"help": "Determines whether text is treated as lowercase."}
     )
     nori_readingform: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={
+            "help": "Filter rewrites tokens written in Hanja to their Hangul form."}
     )
     cjk_bigram: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={
+            "help": "Determines whether to use bigram for Chinese, English and Korean."}
     )
     decimal_digit: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={"help": "Filter folds unicode digits to 0-9"}
     )
     dfr_basic_model: str = field(
         default="g",
-        metadata={"help": "[g, if, in, ine]"}
+        metadata={
+            "help": "Basic model of information content for `divergence from randomness`.",
+            "choices": ["g", "if", "in", "ine"],
+        }
     )
     dfr_after_effect: str = field(
         default="l",
-        metadata={"help": "[b, l]"}
+        metadata={
+            "help": "First normalization of information gain.",
+            "choices": ["b", "l"],
+        }
     )
     es_normalization: str = field(
         default="h2",
-        metadata={"help": "[no, h1, h2, h3, z]"}
+        metadata={
+            "help": "Second (length) normalization",
+            "choices": ["no", "h1", "h2", "h3", "z"],
+        }
     )
     dfi_measure: str = field(
         default="standardized",
-        metadata={"help": "[standardized, saturated, chisquared]"}
+        metadata={
+            "help": "Three basic measures of divergence from independence",
+            "choices": ["standardized", "saturated", "chisquared"],
+        },
     )
     ib_distribution: str = field(
         default="ll",
-        metadata={"help": "[ll, spl]"}
+        metadata={
+            "help": "Probabilistic distribution used to model term occurrence",
+            "choices": ["ll", "spl"],
+        }
     )
     ib_lambda: str = field(
         default="df",
-        metadata={"help": "[df, ttf]"}
+        metadata={
+            "help": ":math:`λ_w` parameter of the probability distribution",
+            "choices": ["df", "ttf"],
+        }
     )
     lmd_mu: int = field(
         default=2000,
-        metadata={"help": ""}
+        metadata={"help": "Parameters to be used in `LM Dirichlet similarity`."}
     )
     lmjm_lambda: float = field(
         default=0.1,
-        metadata={"help": "[0.1(short text) ~ 0.7(long text)]"}
+        metadata={
+            "help": (
+                "The optimal value depends on both the collection and the query. "
+                "The optimal value is around 0.1 for title queries and 0.7 for long queries. "
+                "Default to 0.1. When value approaches 0, "
+                "documents that match more query terms will be ranked higher than those that match fewer terms."
+            )
+        }
     )
 
 
@@ -284,11 +331,14 @@ class ElasticSearchArguments(RetrievalArguments):
 class DenoisingArguments(ElasticSearchArguments):
     denoising_func: Optional[str] = field(
         default=None,
-        metadata={"help": "[sentence_permutation,...]"}
+        metadata={"help": "Decide which denoising function to use."}
     )
     permute_sentence_ratio: float = field(
         default=1.0,
-        metadata={"help": "[0.0 ~ 1.0]"}
+        metadata={
+            "help": "Decide how much to shuffle sentences.",
+            "choices": range(0, 1),
+        }
     )
 
 

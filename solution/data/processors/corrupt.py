@@ -4,8 +4,7 @@ import re
 
 
 def permute_sentences(examples, data_args, p=1.0):
-    """
-    Permutate sentences
+    """Permutate sentences
 
     Args:
         examples (Dict[Any]): DatasetDict
@@ -15,6 +14,7 @@ def permute_sentences(examples, data_args, p=1.0):
     Returns:
         Dict[Any]: DatasetDict
     """
+
     p = data_args.permute_sentence_ratio
 
     answers = []

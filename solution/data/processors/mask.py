@@ -19,12 +19,32 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
 def cosine_similarity(A, B):
-    """Calculate cosine similarity between A and B"""
+    """
+    Calculate cosine similarity between A and B
+    
+    Args:
+        A([int]): one encoded question
+        B([int]): one encoded word
+        
+    Returns:
+        float: cosine similarity between A and B
+    """
+
     return dot(A, B) / (norm(A) * norm(B))
 
 
 def _ext_prepare_train_features_flatten_trunc(examples, tokenizer):
-    """Create dataset for random masking."""
+    """
+    make tokenized examples for random masking.
+    
+    Args:
+        examples(dict): question answering dataset
+        tokenizer(BERT Tokenizer): tokenizer for processing
+        
+    Returns:
+        dict: tokenized examples
+    """
+
     new_tokenized_ids = []
     new_att = []
     new_token_type = []
@@ -54,7 +74,18 @@ def _ext_prepare_train_features_flatten_trunc(examples, tokenizer):
 
 
 def make_hard_word(tokenizer, ids, answer, idx):
-    """find confusing words for adding"""
+    """
+    find confusing words for adding
+    
+    Args:
+        tokenizer(BERT Tokenizer): Tokenizer for encoding and decoding
+        ids([int]): tokenized context
+        answer(str): answer to this question answering task
+        idx(intTensor): index with the highest similarity score 
+        
+    Returns:
+        str: word with the highest similarity score 
+    """
 
     front_idx = int(idx)
     back_idx = int(idx)
@@ -84,7 +115,19 @@ def make_hard_word(tokenizer, ids, answer, idx):
 
 
 def make_mask_word(tokenizer, ids, answer, idx):
-    """find confusing words for masking"""
+    """
+    find confusing words for masking
+    
+    Args:
+        tokenizer(BERT Tokenizer): Tokenizer for encoding and decoding
+        ids([int]): tokenized context
+        answer(str): answer to this question answering task
+        idx(intTensor): index with the highest similarity score
+        
+    Returns:
+        [int]: masked context
+    """
+
     front_idx = int(idx)
     back_idx = int(idx)
 
@@ -116,7 +159,18 @@ def make_mask_word(tokenizer, ids, answer, idx):
 
 
 def make_word_dict(tokens, tokenizer, answer):
-    """Check the token to make a perfect word."""
+    """
+    Check the token to make a perfect word.
+    
+    Args:
+        tokens([int]): tokenized question and context
+        tokenizer(BERT Tokenizer): Tokenizer for encoding and decoding
+        answer(str): answer to this question answering task
+        
+    Returns:
+        [int]: indices for masking
+    """
+
     word_start = False
     second_sep = False
     word_index = {}
@@ -158,9 +212,19 @@ def make_word_dict(tokens, tokenizer, answer):
 
 
 def mask_word_with_ST(train_dataset, tokenizer):
-    """Calculate cosine similarity between query and 
-       all words by using sentence transformer, 
-       and mask top N words with high similarity."""
+    """
+    Calculate cosine similarity between query and 
+    all words by using sentence transformer, 
+    and mask top N words with high similarity.
+    
+    Args:
+        train_dataset(transformer dataset): tokenized dataset
+        tokenizer(BERT Tokenizer): tokenizer for checking values
+        
+    Returns:
+        dict: Tokenized dataset with masking at high similarity
+    """
+
     pad_idx = 0
     top_k = 20
     new_ids = []
@@ -219,7 +283,21 @@ def mask_word_with_ST(train_dataset, tokenizer):
 
 
 def mask_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, train_dataset):
-    """find words that the model is confusing by using dot product and mask top N words."""
+    """
+    find words that the model is confusing by using dot product 
+    ,then mask top N words.
+    
+    Args:
+        dataloader(DataLoader): dataloader that contains tokenized questions and contexts
+        tokenizer(BERT Tokenizer): tokenizer for encoding and decoding
+        offset_mapping([(int,int)]): this information is in order to apply the processed part of the truncated data to the location of the original data.
+        sample_mapping([int]): checking which context the applied context belongs to
+        train_dataset(dataset): original dataset (raw dataset)
+        
+    Returns:
+        dataset: original dataset with masking
+    """
+
     new_ids = []
     mask_token = tokenizer.mask_token_id
 
@@ -319,7 +397,21 @@ def mask_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, tr
 
 
 def add_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, train_dataset):
-    """find words that the model is confusing by using dot product and add top N words."""
+    """
+    find words that the model is confusing by using dot product 
+    ,then add top N words.
+    
+    Args:
+        dataloader(DataLoader): dataloader that contains tokenized questions and contexts
+        tokenizer(BERT Tokenizer): tokenizer for encoding and decoding
+        offset_mapping([(int,int)]): this information is in order to apply the processed part of the truncated data to the location of the original data.
+        sample_mapping([int]): checking which context the applied context belongs to
+        train_dataset(dataset): original dataset (raw dataset)
+        
+    Returns:
+        dataset: original dataset with adding
+    """
+
     mask_token = tokenizer.mask_token_id
 
     ignore_tokens = [tokenizer.pad_token_id,
@@ -417,7 +509,17 @@ def add_word_with_emb(dataloader, tokenizer, offset_mapping, sample_mapping, tra
 
 
 def get_question_random_masking_dataset(train_data_path, save_path):
-    """mask proper nouns and common nouns randomly included in the question."""
+    """
+    mask proper nouns and common nouns randomly included in the question.
+    
+    Args:
+        train_data_path(str): path where the dataset for random masking is located
+        save_path(str): path where random masked dataset will be saved
+        
+    Returns:
+        dataset: A dataset with random masking in the question
+    """
+
     context_list = []
     question_list = []
     id_list = []
@@ -459,7 +561,16 @@ def get_question_random_masking_dataset(train_data_path, save_path):
 
 
 def get_ST_mask_dataset(train_data_path, save_path):
-    """Masking on the context by using sentence transformer."""
+    """
+    Masking on the context by using sentence transformer.
+    
+    Args:
+        train_data_path(str): path where the dataset for masking is located
+        save_path(str): path where masked dataset will be saved
+        
+    Returns:
+        dataset: A dataset with masking in the context
+    """
 
     tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
 
@@ -500,7 +611,17 @@ def get_ST_mask_dataset(train_data_path, save_path):
 
 
 def get_emb_mask_dataset(dataset_path, mode, save_path):
-    """Masks or adds words that the model we are going to use is confusing."""
+    """
+    Masks or adds words that the model we are going to use is confusing.
+    
+    Args:
+        train_data_path(str): path where the dataset for masking is located
+        mode(str): value that selects mask or add
+        save_path(str): path where masked dataset will be saved
+        
+    Returns:
+        dataset: A dataset with masking in the context
+    """
 
     tokenizer = AutoTokenizer.from_pretrained('klue/roberta-large')
 

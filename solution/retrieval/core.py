@@ -17,8 +17,7 @@ ArrayMatrix = Union[csr_matrix, np.ndarray]
 
 
 class SearchBase(OutputMixin):
-    """
-    Base class for Search Engine.
+    """Base class for Search Engine.
 
     Abstract method:
         - retrieve: Callable
@@ -45,11 +44,11 @@ class SearchBase(OutputMixin):
 
     @property
     def contexts(self) -> List[str]:
-        """
-        Get corpus contexts(fix name convention).
+        """Get corpus contexts(fix name convention).
         When the object is created, contexts are read from the corpus
         ans assigned as attribute.
         """
+
         return self._contexts
 
     # @property
@@ -73,16 +72,23 @@ class SearchBase(OutputMixin):
 
     @abc.abstractmethod
     def retrieve(self, query, topk, **kwargs) -> Any:
+        """
+        Main method for SearchBase.
+        Subclass and override for custom behavior.
+        """
         pass
 
     @abc.abstractmethod
     def get_relevant_doc(self, query, topk, **kwargs) -> Tuple[List, List]:
+        """
+        Main method for SearchBase.
+        Subclass and override for custom behavior.
+        """
         pass
 
 
 class RetrievalBase(SearchBase, FaissMixin):
-    """
-    Base class for Retrieval module.
+    """Base class for Retrieval module.
 
     Main method:
         - retrieve: Callable
@@ -110,6 +116,7 @@ class RetrievalBase(SearchBase, FaissMixin):
     def p_embedding(self) -> ArrayMatrix:
         """
         Get passage embeddings(fix name convention).
+
         When the object is created, execute the `get_passage_embedding` method
         to get passage embedding from the context attribute.
         """
@@ -124,8 +131,11 @@ class RetrievalBase(SearchBase, FaissMixin):
     def get_query_embedding(self, query, **kwargs):
         """
         Get query embedding.
-        This method is called dynamically 
+
+        This method is called dynamically
         when the `get_relevant_doc` method is executed.
+
+        Subclass and override for custom behavior.
         """
         pass
 
@@ -133,10 +143,14 @@ class RetrievalBase(SearchBase, FaissMixin):
     def get_passage_embedding(self, passage, **kwargs):
         """
         Get passage embedding.
+
         This method is executed when the object is created.
         For efficient retrieval, the cache file is stored
         in the `context_file_path` at the first call.
+
+        Subclass and override for custom behavior.
         """
+
         pass
 
     @abc.abstractmethod
@@ -148,7 +162,10 @@ class RetrievalBase(SearchBase, FaissMixin):
             1. Calculate the similarity among query and passage embedding
                based on the given similarity function(`calculate_scores`).
             2. Returns the top-k documents with the highest similarity and their index.
-            If you use faiss library, faiss does the second job for you.
+
+        If you use faiss library, faiss does the second job for you.
+
+        Subclass and override for custom behavior.
         """
         pass
 
@@ -163,10 +180,11 @@ class RetrievalBase(SearchBase, FaissMixin):
         Retrieves the top k most similar documents from the input query
         and returns them as `DatasetDict` objects in the huggingface Datasets.
 
-        Arguments:
-            query_or_dataset: Union[str, Dataset]
-                use bulk or not
-            topk: Optional[int] Defaults to 1
+        Args:
+            query_or_dataset (Union[str, Dataset]): use bulk or not
+            topk (Optional[int], optional): Defaults to 1.
+            eval_mode (bool, optional): Defaults to True.
+
         Returns:
             If type of query_or_dataset is string:
                 Tuple[List, List]
@@ -175,6 +193,7 @@ class RetrievalBase(SearchBase, FaissMixin):
             otherwise:
                 DatasetDict
         """
+
         doc_scores, doc_indices = self.get_relevant_doc(query_or_dataset,
                                                         topk=topk,
                                                         use_faiss=self.args.use_faiss,
@@ -211,20 +230,20 @@ class RetrievalBase(SearchBase, FaissMixin):
         use_faiss: bool = False,
         **kwargs,
     ) -> Tuple[List, List]:
-        """
-        Retrieve top k documents related to the input query
+        """Retrieve top k documents related to the input query
 
-        Arguments:
+        Args:
             query_or_dataset: Union[str, Dataset]
                 use bulk or not
             topk: Optional[int] Defaults to 1
             use_faiss: bool
         Returns:
             document score: List[int]
-                입력 query에 대한 topk document 유사도
+                topk document's similarity for input query
             document indices: List[str]
-                입력 query에 대한 topk document 인덱스
+                topk document's indices for input query
         """
+
         query_embs = self.get_query_embedding(query_or_dataset, **kwargs)
         doc_scores, doc_indices = self.get_topk_documents(
             query_embs, topk, use_faiss, **kwargs)

@@ -7,12 +7,19 @@ from torch.nn import functional as F
 
 
 class QAConvSDSLayer(nn.Module):
+    """Conv SDS layer for qa output"""
 
     def __init__(
         self,
         input_size: int,
         hidden_dim: int,
     ):
+        """
+        Args:
+            input_size (int): max sequence lengths
+            hidden_dim (int): backbones's hidden dimension
+        """
+
         super().__init__()
         self.conv1 = nn.Conv1d(
             in_channels=input_size,
@@ -27,7 +34,7 @@ class QAConvSDSLayer(nn.Module):
         )
         self.layer_norm = nn.LayerNorm(hidden_dim)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         out = self.conv1(x)
         out = self.conv2(out)
         out = x + torch.relu(out)
@@ -36,9 +43,7 @@ class QAConvSDSLayer(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    """
-    Attention for query embedding
-    """
+    """Attention for query embedding"""
 
     def __init__(self, config):
         """
@@ -54,7 +59,7 @@ class AttentionLayer(nn.Module):
             config.hidden_size, config.hidden_size, bias=True)
         self.dropout = nn.Dropout(0.1)
 
-    def forward(self, x, token_type_ids):
+    def forward(self, x: torch.Tensor, token_type_ids: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x (torch.Tensor): Layer input
@@ -84,9 +89,7 @@ class AttentionLayer(nn.Module):
 
 
 class ConvLayer(nn.Module):
-    """
-    Conv layer for qa output
-    """
+    """Conv layer for qa output"""
 
     def __init__(self, config):
         """
@@ -113,7 +116,7 @@ class ConvLayer(nn.Module):
 
         self.drop_out = nn.Dropout(0.3)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x (torch.Tensor): Layer input

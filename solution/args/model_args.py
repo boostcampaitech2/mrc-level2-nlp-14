@@ -4,16 +4,6 @@ from dataclasses import dataclass, field
 from .base import ModelArguments
 
 
-"""
-method -> reader_type
-    ext -> extractive
-    gen -> generative
-    
-head -> model_head
-conv_out_channel -> qa_conv_out_channel
-"""
-
-
 @dataclass
 class ModelingArguments(ModelArguments):
     """
@@ -27,7 +17,8 @@ class ModelingArguments(ModelArguments):
     reader_type: str = field(
         default="extractive",
         metadata={
-            "help": "Method to MRC system based in. e.g. ext : extraction-based, gen : generation-based"
+            "help": "Method to MRC system based in.",
+            "choices": ["extractive", "generative", "ensemble"],
         },
     )
     architectures: str = field(
@@ -56,20 +47,22 @@ class ModelingArguments(ModelArguments):
     )
     use_auth_token: bool = field(
         default=False,
-        metadata={"help": ""}
+        metadata={"help": "Decide whether to use the auth token"}
     )
     revision: str = field(
         default="main",
-        metadata={"help": ""}
+        metadata={"help": "Determine the version of the model"}
     )
 
 
 @dataclass
 class ModelHeadArguments(ModelingArguments):
-    # 어떻게 구분지을지 고민하기
     model_head: str = field(
         default="conv",
-        metadata={"help": "Extractive Model Head"},
+        metadata={
+            "help": "Decide which head to use in the MRC model",
+            "choices": ["conv"],
+        },
     )
     qa_conv_out_channel: int = field(
         default=1024,
@@ -77,11 +70,14 @@ class ModelHeadArguments(ModelingArguments):
     )
     qa_conv_input_size: int = field(
         default=512,
-        metadata={"help": ""},
+        metadata={
+            "help": "Determine the sequence length to receive input from QA SDS Head. "
+            "The input sequence length of the model must be padded unconditionally."
+        },
     )
     qa_conv_n_layers: int = field(
         default=5,
-        metadata={"help": ""},
+        metadata={"help": "Decide how deep to stack the layers in QA SDS Head."},
     )
 
 

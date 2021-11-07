@@ -3,6 +3,7 @@ from dataclasses import asdict
 from enum import Enum
 from typing import List, Optional, Union
 from functools import partial
+from overrides import overrides
 
 from datasets import load_from_disk, Dataset
 from transformers.utils import logging
@@ -23,6 +24,12 @@ def convert_examples_to_features(
     topk: Optional[int] = 1,
     mode: str = "train",
 ):
+    """Convert input data into features.
+    If the retreiver is input, the examples are built by searching the top k contexts
+    when not in train mode.
+    Return both examples and features for post processing.
+    """
+
     if mode == "test" and retriever is None:
         raise AttributeError
 
@@ -67,25 +74,31 @@ def convert_examples_to_features(
 
 
 class OdqaProcessor(DataProcessor):
+    """ Load Datasets from disk """
+
+    @overrides
     def get_train_examples(self):
         dataset_path = self.data_args.dataset_path
+        input_data_path = os.path.join(dataset_path, "train_dataset")
 
         if self.data_args.curriculum_learn:
-            input_data = load_from_disk(os.path.join(dataset_path, "train_dataset"))[
+            input_data = load_from_disk(input_data_path)[
                 self.data_args.curriculum_split_name]
         else:
-            input_data = load_from_disk(os.path.join(
-                dataset_path, "train_dataset"))["train"]
+            input_data = load_from_disk(input_data_path)["train"]
+
         return input_data
 
+    @overrides
     def get_eval_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(
-            dataset_path, "train_dataset"))["validation"]
+        input_data_path = os.path.join(dataset_path, "train_dataset")
+        input_data = load_from_disk(input_data_path)["validation"]
         return input_data
 
+    @overrides
     def get_test_examples(self):
         dataset_path = self.data_args.dataset_path
-        input_data = load_from_disk(os.path.join(
-            dataset_path, "test_dataset"))["validation"]
+        input_data_path = os.path.join(dataset_path, "test_dataset")
+        input_data = load_from_disk(input_data_path)["validation"]
         return input_data

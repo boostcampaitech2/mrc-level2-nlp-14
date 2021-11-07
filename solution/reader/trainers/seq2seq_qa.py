@@ -33,6 +33,13 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
         post_process_function: Callable = None,
         **kwargs
     ):
+        """[summary]
+
+        Args:
+            eval_examples (datasets.Dataset, optional): [description]. Defaults to None.
+            post_process_function (Callable, optional): [description]. Defaults to None.
+        """
+
         super().__init__(*args, **kwargs)
         self.eval_examples = eval_examples
         self.post_process_function = post_process_function
@@ -48,6 +55,21 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
         max_length: Optional[int] = None,
         num_beams: Optional[int] = None,
     ) -> Dict[str, float]:
+        """[summary]
+
+        Args:
+            eval_dataset (Optional[datasets.Dataset], optional): [description]. Defaults to None.
+            eval_examples (Optional[datasets.Dataset], optional): [description]. Defaults to None.
+            ignore_keys (Optional[List[str]], optional): [description]. Defaults to None.
+            metric_key_prefix (str, optional): [description]. Defaults to "eval".
+            mode (str, optional): [description]. Defaults to "evaluate".
+            max_length (Optional[int], optional): [description]. Defaults to None.
+            num_beams (Optional[int], optional): [description]. Defaults to None.
+
+        Returns:
+            Dict[str, float]: [description]
+        """
+
         self._max_length = max_length if max_length is not None else self.args.generation_max_length
         self._num_beams = num_beams if num_beams is not None else self.args.generation_num_beams
         # memory metrics - must set up as early as possible
@@ -130,6 +152,21 @@ class QuestionAnsweringSeq2SeqTrainer(Seq2SeqBaseTrainer):
         max_length: Optional[int] = None,
         num_beams: Optional[int] = None,
     ) -> PredictionOutput:
+        """[summary]
+
+        Args:
+            test_dataset (datasets.Dataset): [description]
+            test_examples (datasets.Dataset): [description]
+            ignore_keys (Optional[List[str]], optional): [description]. Defaults to None.
+            metric_key_prefix (str, optional): [description]. Defaults to "test".
+            mode (str, optional): [description]. Defaults to "test".
+            max_length (Optional[int], optional): [description]. Defaults to None.
+            num_beams (Optional[int], optional): [description]. Defaults to None.
+
+        Returns:
+            PredictionOutput: [description]
+        """
+
         self._max_length = max_length if max_length is not None else self.args.generation_max_length
         self._num_beams = num_beams if num_beams is not None else self.args.generation_num_beams
         # memory metrics - must set up as early as possible

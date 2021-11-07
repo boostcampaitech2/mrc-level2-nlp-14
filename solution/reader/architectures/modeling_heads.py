@@ -9,6 +9,7 @@ from .modeling_utils import (
 
 
 class QAConvSDSHead(nn.Module):
+    """QA conv SDS head"""
 
     def __init__(
         self,
@@ -17,13 +18,12 @@ class QAConvSDSHead(nn.Module):
         n_layers: int,
         num_labels: int,
     ):
-        """[summary]
-
+        """
         Args:
-            input_size (int): [description]
-            hidden_dim (int): [description]
-            n_layers (int): [description]
-            num_labels (int): [description]
+            input_size (int): max sequence lengths
+            hidden_dim (int): backbone's hidden dimension
+            n_layers (int): number of layers
+            num_labels (int): number of labels used for QA
         """
         super().__init__()
         convs = []
@@ -32,22 +32,14 @@ class QAConvSDSHead(nn.Module):
         self.convs = nn.Sequential(*convs)
         self.qa_output = nn.Linear(hidden_dim, num_labels)
 
-    def forward(self, x):
-        """
-        Args:
-            x (torch.Tensor): Head input
-
-        Returns:
-            [type]: [description]
-        """
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x.shape == (bsz, seq_length, hidden_dim)
         out = self.convs(x)
-        return self.qa_output(out)
+        return self.qa_output(out) # (bsz, seq_length, hidden_dim)
 
 
 class QAConvHeadWithAttention(nn.Module):
-    """
-    QA conv head with attention
-    """
+    """QA conv head with attention"""
 
     def __init__(self, config):
         """
@@ -76,9 +68,7 @@ class QAConvHeadWithAttention(nn.Module):
 
 
 class QAConvHead(nn.Module):
-    """
-    Simple QA conv head
-    """
+    """Simple QA conv head"""
 
     def __init__(self, config):
         """

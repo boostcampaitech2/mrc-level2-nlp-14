@@ -12,6 +12,7 @@ from transformers import (
 
 
 class AutoModelForQuestionAnswering(AutoQA):
+    """ Base class for Extractive Model. """
     reader_type: str = "extractive"
 
     def __init__(self, config):
@@ -20,6 +21,7 @@ class AutoModelForQuestionAnswering(AutoQA):
 
 
 class AutoModelForSeq2SeqLM(AutoS2SLM):
+    """ Base class for Generative Model. """
     reader_type: str = "generative"
 
     def __init__(self, config):
