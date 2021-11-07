@@ -641,23 +641,16 @@ def post_processing_function(
 
 
 def gen_postprocessing_function(examples, predictions, training_args, tokenizer):
-    """[summary]
+    """Remove the spaces before and after the answer
 
     Args:
-        examples ([type]): [description]
-        predictions ([type]): [description]
-        training_args ([type]): [description]
-        tokenizer ([type]): [description]
+        example ([Dataset]): raw datasets
+        predictions ([Dict]): predcitions
+        training_args ([TrainingArguments]): training arguments
+        tokenizer ([Bert tokenizer]): tokenizer
 
     Returns:
-        [type]: [description]
-    """
-
-    """
-    postprocess는 nltk를 이용합니다.
-    Huggingface의 TemplateProcessing을 사용하여
-    정규표현식 기반으로 postprocess를 진행할 수 있지만
-    해당 미션에서는 nltk를 이용하여 간단한 후처리를 진행합니다
+        Dict: predictions
     """
 
     import nltk
