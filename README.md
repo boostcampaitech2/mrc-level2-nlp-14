@@ -28,7 +28,7 @@ _"Korean is all YOU Need for dialoGuE"_
 - [`김태욱`](https://github.com/taeukkkim) &nbsp; Data versioning • Elastic search • Retrieval experiment • N-gram Convolution layer • Bart Denoising objective • Curriculum Learning • Post processing
 - [`허진규`](https://github.com/JeangyuHeo) &nbsp; Data versioning • Curriculum Learning • AEDA • Masking • Reader • EDA • Human Labeling
 - [`이하람`](https://github.com/hrxorxm) &nbsp; Generative model • Extractive & Generative Ensemble • DPR • K-fold • Context Summary
-- [`김채은`](https://github.com/Amber-Chaeeunk) &nbsp; Generative model • Extractive & Generative Ensemble • Underline Embedding Layer • Pivot Tanslation • Code • Data versioning • Context Summary
+- [`김채은`](https://github.com/Amber-Chaeeunk) &nbsp; Generative model • Extractive & Generative Ensemble • Underline Embedding Layer • PunctuationPivot • Tanslation • Code • Data versioning • Context Summary
 - [`유영재`](https://github.com/uyeongjae) &nbsp; Data versioning • Elastic search • Retrieval experiment • Data Augmentation • Post processing • Ensemble(hard & soft voting)
 
 ## 2. Project Outline
