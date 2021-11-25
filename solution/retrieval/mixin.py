@@ -19,7 +19,7 @@ from ..utils.constant import (
 )
 
 
-SENTENCE_ENCODER_OUTPUT = Tuple[torch.deivce,
+SENTENCE_ENCODER_OUTPUT = Tuple[torch.device,
                                 PretrainedTokenizer, PreTrainedModel]
 
 
